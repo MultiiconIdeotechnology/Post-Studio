@@ -1,0 +1,25 @@
+# Optional HTTPS front door. Usage:
+#   DOMAIN=social.multiicon.in docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d
+# Caddy gets a Let's Encrypt certificate for DOMAIN automatically (ports 80 and 443 must be open).
+services:
+  app:
+    ports: !override []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN to your subdomain}
+    command: caddy reverse-proxy --from ${DOMAIN} --to app:8080
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Multiicon Post Studio</title>
+<script src="/shim.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+[hidden]{display:none!important}
+html,body{margin:0}
+img{max-width:100%}
+/* Layout: one long working form; five numbered steps (a real sequence), then a grid of post cards. Brand colours from the existing @multiicon.official posts. */
+:root{
+  --paper:#f4f1ea; --surface:#fffdf8; --sunk:#ebe6db; --ink:#131a33; --muted:#585e74; --line:#ddd6c8;
+  --accent:#e58f24; --accent-ink:#8c4a00; --accent-soft:#fbe6c8;
+  --ok:#1d7448; --ok-soft:#dcefe3; --warn:#9a4b00; --warn-soft:#fdebd3; --bad:#b0271b; --bad-soft:#fbe0dc;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body:"Public Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e1322; --surface:#161c30; --sunk:#1d2440; --ink:#ecE8df; --muted:#a2a7ba; --line:#2b3354;
+  --accent:#f2a33a; --accent-ink:#f7c27c; --accent-soft:#3a2a12;
+  --ok:#5cc58d; --ok-soft:#173326; --warn:#f2a95c; --warn-soft:#3a2810; --bad:#f08a7e; --bad-soft:#3d1a17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e1322; --surface:#161c30; --sunk:#1d2440; --ink:#ece8df; --muted:#a2a7ba; --line:#2b3354;
+  --accent:#f2a33a; --accent-ink:#f7c27c; --accent-soft:#3a2a12;
+  --ok:#5cc58d; --ok-soft:#173326; --warn:#f2a95c; --warn-soft:#3a2810; --bad:#f08a7e; --bad-soft:#3d1a17; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{padding-block:28px 8px}
+.brandline{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1.05;margin:6px 0 8px;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+.banner{margin-top:14px;padding:10px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn);font-weight:500}
+main{display:grid;gap:18px;padding-block:18px 60px}
+section.step{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;display:grid;gap:14px}
+.stephead{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.num{font-family:var(--f-mono);font-weight:600;color:var(--accent-ink);font-size:13px}
+h2{font-family:var(--f-display);font-weight:800;font-size:22px;margin:0;line-height:1.2}
+.hint{color:var(--muted);font-size:13.5px;margin:0;max-width:75ch}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.field{display:grid;gap:5px;min-width:0}
+.field>span{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
+textarea{resize:vertical;min-height:70px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;align-items:start}
+button{font:inherit;font-weight:600;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px}
+button:hover:not(:disabled){border-color:var(--accent)}
+button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+button.go{background:var(--accent);color:#1b1206;border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.small{padding:5px 10px;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.acc{background:var(--accent-soft);color:var(--accent-ink)}
+.out{background:var(--sunk);border-radius:10px;padding:12px 14px;font-size:14px}
+.out:empty{display:none}
+.out ul{margin:6px 0 0;padding-left:18px}
+.status{font-size:13.5px;color:var(--muted);min-height:1.2em}
+.status.err{color:var(--bad)}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted);background:var(--paper)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop label{color:var(--accent-ink);font-weight:600;cursor:pointer;text-decoration:underline}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.ph{position:relative;border-radius:10px;overflow:hidden;background:var(--sunk);border:2px solid transparent;cursor:pointer;aspect-ratio:4/5}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph.pick{border-color:var(--accent)}
+.ph .score{position:absolute;top:6px;left:6px;font-family:var(--f-mono);font-size:12px;font-weight:600;background:rgba(10,14,28,.78);color:#fff;padding:2px 7px;border-radius:6px}
+.ph .tick{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(10,14,28,.55);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.ph.pick .tick{background:var(--accent);color:#1b1206}
+.ph .why{position:absolute;inset:auto 0 0 0;background:linear-gradient(transparent,rgba(10,14,28,.88));color:#fff;font-size:11.5px;line-height:1.3;padding:20px 8px 7px}
+.ph .rm{position:absolute;bottom:6px;right:6px;display:none}
+.edits{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.ed{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px;background:var(--paper)}
+.ed canvas{width:100%;border-radius:8px;cursor:crosshair;display:block;background:var(--sunk)}
+.sl{display:grid;grid-template-columns:78px 1fr 34px;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
+.sl input{width:100%;accent-color:var(--accent)}
+.sl output{font-family:var(--f-mono);font-size:11.5px;text-align:right}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--accent);padding:4px 0 4px 10px;margin:0;max-width:80ch}
+.posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+.post{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;align-content:start;min-width:0}
+.post.approved{border-color:var(--ok)}
+.phead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.phead .when{display:flex;gap:6px;margin-left:auto}
+.phead .when input{width:auto;padding:4px 6px;font-size:13px}
+.topic{font-family:var(--f-display);font-weight:600;font-size:17px;line-height:1.25;margin:0}
+.opts{display:flex;gap:6px;flex-wrap:wrap}
+.opts button{padding:5px 10px;font-size:13px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opts button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.pv{position:relative;border-radius:10px;overflow:hidden;background:var(--sunk)}
+.pv canvas{width:100%;display:block;aspect-ratio:4/5}
+.pvnav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dots{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+details.se{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+details.se summary{cursor:pointer;font-weight:600;font-size:13.5px}
+details.se .grid{display:grid;gap:8px;margin-top:8px}
+.meta{font-size:13px;color:var(--muted);display:grid;gap:4px}
+.meta b{color:var(--ink);font-weight:600}
+.cnt{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-align:right}
+.ask{display:flex;gap:6px}
+.ask input{flex:1}
+.approve{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;font-weight:500}
+.approve input{margin-top:3px;accent-color:var(--ok)}
+.visuals{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.visuals img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;border:2px solid transparent;cursor:pointer}
+.visuals img.sel{border-color:var(--accent)}
+.login{position:fixed;inset:0;background:var(--paper);display:grid;place-items:center;z-index:50;padding:16px}
+.login form{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;display:grid;gap:12px;width:min(360px,100%)}
+.panel{border-radius:10px;padding:12px;background:var(--sunk);display:grid;gap:8px;font-size:13.5px}
+.live{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);background:var(--sunk);border-radius:8px;padding:10px;max-height:150px;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.skel{aspect-ratio:4/5;border-radius:10px;background:linear-gradient(100deg,var(--sunk) 40%,var(--paper) 50%,var(--sunk) 60%) 0 0/300% 100%;animation:sh 1.4s linear infinite}
+@keyframes sh{to{background-position:-150% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+.weekbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+table.sched{border-collapse:collapse;width:100%;font-size:13.5px}
+table.sched td,table.sched th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.sched th{font-size:12px;color:var(--muted);font-weight:600}
+.tw{overflow-x:auto}
+.tab{font-variant-numeric:tabular-nums}
+@media (max-width:520px){section.step{padding:16px 14px}.posts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="brandline">@multiicon.official · Instagram</div>
+  <h1>Weekly post planner</h1>
+  <div id="studioStatus" class="row" style="gap:8px;margin-top:10px"></div>
+  <p class="lede">Agree the week, drop in last week's event photos, let Claude pick and polish the best ones, then review two or three options for every post. Nothing goes live until a person approves it.</p>
+  <div class="banner" id="noClaude" hidden>The server has no Claude API key yet (ANTHROPIC_API_KEY), so the suggest, pick and write buttons are off. Photo edits, slide edits and downloads still work.</div>
+</header>
+
+<main>
+<section class="step" id="s1">
+  <div class="stephead"><span class="num">STEP 1</span><h2>Agree how many posts</h2><span class="chip" id="agreeChip">Not agreed yet</span></div>
+  <div class="row">
+    <label class="field" style="width:170px"><span>Week starting (Monday)</span><input type="date" id="weekStart"></label>
+    <label class="field" style="width:120px"><span>Posts this week</span><input type="number" id="postCount" min="1" max="14" value="4"></label>
+    <button id="suggestBtn">Suggest a number</button>
+    <button class="primary" id="agreeBtn">Agree</button>
+  </div>
+  <div class="out" id="suggestOut"></div>
+  <div class="status" id="suggestStatus"></div>
+</section>
+
+<section class="step" id="s2">
+  <div class="stephead"><span class="num">STEP 2</span><h2>Last week's event</h2></div>
+  <div class="row">
+    <label class="field" style="width:280px"><span>How many of the posts come from the event?</span><select id="eventCount"></select></label>
+  </div>
+  <div id="eventBlock" class="grid" style="display:grid;gap:14px">
+    <p class="hint">Claude only uses the facts you type here. Anything missing comes back as <b>[CONFIRM: …]</b> and blocks approval until you fill it.</p>
+    <div class="grid2">
+      <label class="field"><span>Event name</span><input type="text" id="evName" placeholder="e.g. Multiicon Partner Evening 2026"></label>
+      <label class="field"><span>Date and place</span><input type="text" id="evWhen" placeholder="e.g. 24 Oct, Rajkot office"></label>
+      <label class="field"><span>What happened</span><textarea id="evWhat" placeholder="Who spoke, what was launched or celebrated, one moment people liked"></textarea></label>
+      <label class="field"><span>Who was there</span><textarea id="evWho" placeholder="e.g. 40 guests: partners, customers and the team"></textarea></label>
+    </div>
+    <label class="approve"><input type="checkbox" id="evConsent"> Everyone clearly visible in these photos is okay with appearing on Instagram.</label>
+    <div class="drop" id="drop">Drop up to 15 raw photos here or <label for="photoIn">choose files</label>
+      <input type="file" id="photoIn" accept="image/jpeg,image/png,image/webp" multiple hidden>
+      <div class="hint" style="margin:6px auto 0">Photos stay in this browser tab. They go to Claude only when you press Pick, and are not saved if you reload.</div>
+    </div>
+    <div class="photos" id="photoGrid"></div>
+    <div class="row"><button class="go" id="pickBtn" disabled>Pick the best photos</button><span class="status" id="pickStatus"></span></div>
+  </div>
+</section>
+
+<section class="step" id="s3">
+  <div class="stephead"><span class="num">STEP 3</span><h2>Polish the picked photos</h2><span class="chip" id="pickedChip">0 picked</span></div>
+  <p class="hint">Auto levels, light, colour and sharpening run right here, the same way every time. Click a photo to set the point a crop should keep in frame.</p>
+  <div class="edits" id="editGrid"></div>
+  <p class="note">Generative retouching (removing a stray object, relighting a face, extending a background) needs an image model such as Flux Kontext, Kling or Gemini image editing, called from a small server with its API key. That isn't connected yet; it's the next slice once there's hosting.</p>
+</section>
+
+<section class="step" id="s4">
+  <div class="stephead"><span class="num">STEP 4</span><h2>What else should this week cover?</h2></div>
+  <div class="grid2">
+    <label class="field"><span>Trends or news you've noticed</span><textarea id="trends" placeholder="Paste headlines, reels or topics doing well in IT, AI, fintech or travel this week"></textarea></label>
+    <label class="field"><span>Things we want to push</span><textarea id="focus" placeholder="e.g. Market Maya paper trading, hiring for Flutter devs, a client milestone"></textarea></label>
+  </div>
+  <p class="hint">Claude can't browse live trends from this page, so paste what you've seen. It will also suggest festivals and observances for the week and mark them to double-check.</p>
+  <div class="row"><button class="go" id="genBtn">Write the week's posts</button><button id="stopBtn" hidden>Stop</button><span class="status" id="genStatus"></span></div>
+</section>
+
+<section class="step" id="s5">
+  <div class="stephead"><span class="num">STEP 5</span><h2>Review, approve, post</h2><span class="chip" id="approvedChip">0 approved</span></div>
+  <p class="hint">Switch between options, edit any slide or caption, or ask for a change in your own words. A post can be approved once every [CONFIRM] gap is filled.</p>
+  <div class="posts" id="posts"></div>
+  <div class="weekbar">
+    <div class="tw" style="flex:1 1 360px;min-width:0"><table class="sched" id="sched"></table></div>
+    <button class="primary" id="exportAll">Download approved posts (.zip)</button>
+  </div>
+  <div class="status" id="exportStatus"></div>
+</section>
+</main>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ---------- brand + voice (from the multiicon-post-studio skill) ---------- */
+const BRAND = `ACCOUNT: @multiicon.official, Instagram of Multiicon Ideotechnology (P) Ltd., a product-based IT company in Rajkot, Gujarat, India. Website multiicon.in.
+FACTS YOU MAY USE (never invent other numbers, awards, quotes, clients or results):
+- Works across six industries: finance and broking, travel and hospitality, security and surveillance, HR, news and media, social welfare.
+- 50K+ customers, 14 national awards, 20+ copyrights and trademarks.
+- 7 startups (including News On Screen, Jumbo Job, India Legend), 5 enterprise projects (Travel ERP, Forex ERP, Market Maya, Multi API, Right Hand) and 30+ utility apps.
+- Ideotechnology projects: JumboAI Algo, Candlestick Scanner, Backtest Strategy, mPiler.
+- Market Maya (marketmaya.com): AI algo trading platform. "Build. Back Test. Analyse. Follow. Autotrade." Paper and live auto trade, community, free to start.
+UNCONFIRMED, write [CONFIRM: ...] instead of stating: company age, award names, Market Maya backtest length.
+RULES: Any Market Maya or trading post ends the caption with "Trading involves risk. Past performance does not guarantee future results." and its risk field says compliance must approve. Never claim returns or profits. If people appear in photos, the risk field mentions consent.`;
+const VOICE = `VOICE: write like a sharp person on the Multiicon team, not like an AI. Plain, specific, confident, warm. Indian English spelling. Speak as "we".
+Avoid: em dashes, "in today's fast-paced world", "unlock", "elevate", "dive in", "game-changer", "revolutionary", "seamless", "journey", "embark", stacked rhetorical questions, triple-adjective lists, hashtags inside sentences. At most 2 emoji in a caption.
+Do: open with a concrete hook under 125 characters that a scroller would stop for; short paragraphs; vary sentence length; one clear call to action (save, share, tag, comment, link in bio). Audience: Indian professionals first, readable for an international audience.`;
+const TEMPLATES = `SLIDE TEMPLATES (1080x1350 portrait, brand navy/cream/saffron):
+- "photo": full-bleed photo, kicker + headline over a dark fade at the bottom. Needs "photo".
+- "photo-card": dark slide, photo on top, kicker + headline + short body below. Needs "photo".
+- "photo-light": light slide, photo on top, headline + body below. Needs "photo".
+- "text-dark" / "text-light": kicker + big headline + body, no photo.
+- "number": light slide, kicker holds a short number like "01", then headline + body. For list carousels.
+- "cta": light closing slide, headline + body; the handle is added automatically.
+Limits: kicker <= 5 words (uppercase label), headline <= 9 words, body <= 28 words. Carousel 2 to 8 slides; single image = 1 slide.`;
+const OPTION_SHAPE = `{"label":"2-4 word name of the angle","format":"carousel or single","hook":"first line","caption":"full caption starting with the hook, no hashtags, under 1200 characters","hashtags":["#Multiicon","..."],"alt":"one plain sentence describing slide 1","why":"one line on why it could perform","risk":"one line: facts to confirm, consent, compliance","slides":[{"template":"photo-card","photo":1,"kicker":"","headline":"","body":""}]}`;
+const TPL = ["photo", "photo-card", "photo-light", "text-dark", "text-light", "number", "cta"];
+const PHOTO_TPL = new Set(["photo", "photo-card", "photo-light"]);
+
+/* ---------- state ---------- */
+const KEY = "multiicon-planner-v1";
+const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const fmtDay = s => parse(s).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+function nextMonday() { const d = new Date(); const add = ((8 - d.getDay()) % 7) || 7; d.setDate(d.getDate() + add); return iso(d); }
+
+function defaults() {
+  return { weekStart: nextMonday(), postCount: 4, agreed: false, suggestion: null, eventCount: 1,
+    ev: { name: "", when: "", what: "", who: "", consent: false }, trends: "", focus: "", posts: [] };
+}
+let S;
+try { S = Object.assign(defaults(), JSON.parse(localStorage.getItem(KEY) || "null") || {}); } catch { S = defaults(); }
+let saveT;
+function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }, 300); }
+
+const photos = []; // in-memory only: {id,name,img,url,score,desc,reason,issues,pick,focal,edit,cache,cacheKey}
+const photoById = id => photos.find(p => p.id === id);
+const EDIT0 = { auto: true, bright: 0, contrast: 8, sat: 8, warm: 0, sharp: 30 };
+
+/* ---------- Claude ---------- */
+let sample = null, downloads = null, imgLimits = null;
+const ready = (async () => {
+  const use = window.claude && window.claude.use;
+  if (!use) return;
+  try { sample = await window.claude.use("sample"); } catch { sample = null; }
+  try { downloads = await window.claude.use("downloads"); } catch { downloads = null; }
+  if (sample) { try { imgLimits = (await sample.limits()).images || null; } catch { imgLimits = null; } }
+})();
+ready.then(() => { $("#noClaude").hidden = !!sample; refreshButtons(); });
+
+function errCopy(e) {
+  const c = e && e.code;
+  if (c === "not_granted") return "Claude access was declined for this page. Reload the page to be asked again.";
+  if (c === "rate_limited") return "Too many requests at once. Wait a minute, then try again.";
+  if (c === "invalid_json") return "Claude's reply came back in the wrong shape. Try again.";
+  if (c === "cancelled") return "Stopped.";
+  if (c === "images_unavailable") return "This view can't send photos to Claude. Open the page on claude.ai.";
+  return "Claude couldn't answer" + (c ? " (" + c + ")" : "") + ". Try again.";
+}
+function setStatus(el, text, err) { el.textContent = text || ""; el.classList.toggle("err", !!err); }
+
+/* ---------- step 1 ---------- */
+const weekStart = $("#weekStart"), postCount = $("#postCount");
+weekStart.value = S.weekStart; postCount.value = S.postCount;
+weekStart.onchange = () => { S.weekStart = weekStart.value || nextMonday(); S.agreed = false; save(); renderAgree(); };
+postCount.oninput = () => { S.postCount = clamp(parseInt(postCount.value) || 1, 1, 14); S.agreed = false; save(); renderAgree(); };
+$("#agreeBtn").onclick = () => { S.postCount = clamp(parseInt(postCount.value) || 1, 1, 14); postCount.value = S.postCount; S.agreed = true; save(); renderAgree(); };
+function renderAgree() {
+  const c = $("#agreeChip");
+  c.className = "chip " + (S.agreed ? "ok" : "warn");
+  c.textContent = S.agreed ? `Agreed: ${S.postCount} posts, ${fmtDay(S.weekStart)} to ${fmtDay(addDays(S.weekStart, 6))}` : "Not agreed yet";
+  const sel = $("#eventCount"); const cur = Math.min(S.eventCount, S.postCount);
+  sel.innerHTML = Array.from({ length: S.postCount + 1 }, (_, i) => `<option value="${i}">${i === 0 ? "None, no event this week" : i + " of " + S.postCount}</option>`).join("");
+  sel.value = cur; S.eventCount = cur;
+  $("#eventBlock").hidden = cur === 0;
+  renderSuggestion(); refreshButtons();
+}
+function renderSuggestion() {
+  const o = S.suggestion, el = $("#suggestOut");
+  if (!o) { el.innerHTML = ""; return; }
+  el.innerHTML = `<b>Claude suggests ${esc(o.count)} posts.</b> ${esc(o.reason)}` +
+    (Array.isArray(o.mix) && o.mix.length ? "<ul>" + o.mix.map(m => `<li><b>${esc(m.day)}</b>: ${esc(m.idea)}</li>`).join("") + "</ul>" : "") +
+    (Array.isArray(o.dates) && o.dates.length ? `<div style="margin-top:6px">Dates to check: ${o.dates.map(esc).join("; ")}</div>` : "") +
+    `<div style="margin-top:8px"><button class="small" id="useSug">Use ${esc(o.count)}</button></div>`;
+  $("#useSug").onclick = () => { postCount.value = o.count; postCount.oninput(); };
+}
+$("#suggestBtn").onclick = async () => {
+  const st = $("#suggestStatus"); const b = $("#suggestBtn");
+  b.disabled = true; setStatus(st, "Thinking…");
+  try {
+    const o = await sample.json(`${BRAND}
+
+You plan the Instagram calendar. Suggest how many feed posts @multiicon.official should publish in the week ${fmtDay(S.weekStart)} to ${fmtDay(addDays(S.weekStart, 6))} (${S.weekStart} is a Monday).
+Consider: a B2B product company with a small team, quality over volume, 3 to 5 posts a week is typical, festivals or observances in India or internationally that fall in this week (only ones you are confident about), and that one post may be an event recap.
+Team notes: ${S.trends || "none"} ${S.focus || ""}
+Reply with only JSON: {"count":4,"reason":"one or two sentences","mix":[{"day":"Mon","idea":"short idea"}],"dates":["Observance, date (verify)"]}`, { modelTier: "quick" });
+    const n = clamp(parseInt(o.count) || 4, 1, 14);
+    S.suggestion = { count: n, reason: String(o.reason || ""), mix: Array.isArray(o.mix) ? o.mix.slice(0, 14) : [], dates: Array.isArray(o.dates) ? o.dates.slice(0, 6).map(String) : [] };
+    save(); renderSuggestion(); setStatus(st, "");
+  } catch (e) { setStatus(st, errCopy(e), true); }
+  b.disabled = !sample;
+};
+
+/* ---------- step 2 ---------- */
+$("#eventCount").onchange = e => { S.eventCount = parseInt(e.target.value) || 0; $("#eventBlock").hidden = S.eventCount === 0; save(); refreshButtons(); };
+[["evName", "name"], ["evWhen", "when"], ["evWhat", "what"], ["evWho", "who"]].forEach(([id, k]) => {
+  const el = $("#" + id); el.value = S.ev[k] || ""; el.oninput = () => { S.ev[k] = el.value; save(); };
+});
+$("#evConsent").checked = !!S.ev.consent;
+$("#evConsent").onchange = e => { S.ev.consent = e.target.checked; save(); document.querySelectorAll(".post").forEach(c => updateApproveGate(c)); };
+$("#trends").value = S.trends; $("#trends").oninput = e => { S.trends = e.target.value; save(); };
+$("#focus").value = S.focus; $("#focus").oninput = e => { S.focus = e.target.value; save(); };
+
+const drop = $("#drop");
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => addFiles(e.dataTransfer.files));
+$("#photoIn").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
+
+function addFiles(list) {
+  const files = [...list].filter(f => /^image\//.test(f.type));
+  const room = 15 - photos.length;
+  if (files.length > room) setStatus($("#pickStatus"), `Only 15 photos per week. Added the first ${Math.max(room, 0)}.`, true);
+  files.slice(0, Math.max(room, 0)).forEach(f => {
+    const url = URL.createObjectURL(f); const img = new Image();
+    const p = { id: uid(), name: f.name, img, url, score: null, desc: "", reason: "", issues: "", pick: false, focal: { x: .5, y: .42 }, edit: { ...EDIT0 } };
+    img.onload = () => { photos.push(p); renderPhotos(); };
+    img.src = url;
+  });
+}
+function renderPhotos() {
+  const g = $("#photoGrid");
+  g.innerHTML = photos.map(p => `<div class="ph${p.pick ? " pick" : ""}" data-id="${p.id}" title="${esc(p.reason || p.name)}" role="button" tabindex="0" aria-pressed="${p.pick}">
+    <img src="${p.url}" alt="${esc(p.desc || p.name)}">${p.score != null ? `<span class="score">${p.score.toFixed(1)}</span>` : ""}
+    <span class="tick">${p.pick ? "✓" : "+"}</span>${p.reason ? `<span class="why">${esc(p.reason)}</span>` : ""}</div>`).join("");
+  g.querySelectorAll(".ph").forEach(el => {
+    const tog = () => { const p = photoById(el.dataset.id); p.pick = !p.pick; renderPhotos(); renderEdits(); redrawAll(); };
+    el.onclick = tog; el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tog(); } };
+  });
+  refreshButtons();
+}
+function scaledBlob(img, max = 1024, q = .85) {
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return new Promise(r => c.toBlob(r, "image/jpeg", q));
+}
+$("#pickBtn").onclick = async () => {
+  const st = $("#pickStatus"), b = $("#pickBtn");
+  if (!imgLimits) { setStatus(st, "This view can't send photos to Claude. Open the page on claude.ai, or tap photos to pick them yourself.", true); return; }
+  b.disabled = true;
+  const per = Math.max(1, Math.min(imgLimits.maxCount || 5, 8));
+  const ev = S.ev;
+  try {
+    for (let i = 0; i < photos.length; i += per) {
+      const batch = photos.slice(i, i + per);
+      setStatus(st, `Looking at photos ${i + 1}–${i + batch.length} of ${photos.length}…`);
+      const blobs = await Promise.all(batch.map(p => scaledBlob(p.img)));
+      const res = await sample.json(`You are the photo editor for @multiicon.official, the Instagram account of Multiicon, a product IT company in Rajkot, India.
+These ${batch.length} photos are raw shots from a company event. Event: ${ev.name || "not given"}. ${ev.what || ""}
+Rate each photo for an Instagram feed post meant to earn reach, saves, shares and likes from Indian and international professional audiences. Judge: faces in sharp focus, genuine expressions and moments, flattering light, clean composition and background, how well it tells the story of the event, whether it is a near-duplicate of another photo in this set, and whether simple edits (exposure, colour, crop) can fix its problems.
+The photos are numbered 1 to ${batch.length} in the order attached.
+Reply with only a JSON array, one object per photo: [{"n":1,"score":7.5,"desc":"what it shows, under 14 words","reason":"why this score, under 16 words","issues":"fixable issues or none","focal":{"x":0.5,"y":0.4}}]
+score is 0 to 10 with one decimal. focal is the point (0 to 1 from top-left) a 4:5 crop must keep, usually the main face or group.`, { images: blobs });
+      (Array.isArray(res) ? res : []).forEach(r => {
+        const p = batch[(parseInt(r.n) || 0) - 1]; if (!p) return;
+        p.score = clamp(Number(r.score) || 0, 0, 10); p.desc = String(r.desc || ""); p.reason = String(r.reason || ""); p.issues = String(r.issues || "");
+        if (r.focal && isFinite(r.focal.x) && isFinite(r.focal.y)) p.focal = { x: clamp(+r.focal.x, 0, 1), y: clamp(+r.focal.y, 0, 1) };
+      });
+      renderPhotos();
+    }
+    const want = Math.min(photos.length, Math.max(1, S.eventCount) * 4);
+    const ranked = [...photos].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    photos.forEach(p => p.pick = false);
+    ranked.slice(0, want).filter(p => (p.score ?? 0) >= 5).forEach(p => p.pick = true);
+    photos.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    renderPhotos(); renderEdits(); redrawAll();
+    setStatus(st, `Picked ${photos.filter(p => p.pick).length} of ${photos.length}. Tap any photo to add or drop it.`);
+  } catch (e) { setStatus(st, errCopy(e), true); }
+  refreshButtons();
+};
+
+/* ---------- step 3: deterministic photo edits ---------- */
+function processed(p) {
+  const key = JSON.stringify(p.edit);
+  if (p.cacheKey === key && p.cache) return p.cache;
+  const s = Math.min(1, 1600 / Math.max(p.img.naturalWidth, p.img.naturalHeight));
+  const c = document.createElement("canvas"); c.width = Math.round(p.img.naturalWidth * s); c.height = Math.round(p.img.naturalHeight * s);
+  const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(p.img, 0, 0, c.width, c.height);
+  const e = p.edit;
+  const id = x.getImageData(0, 0, c.width, c.height), a = id.data, n = a.length;
+  let lo = [0, 0, 0], hi = [255, 255, 255];
+  if (e.auto) {
+    const h = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+    for (let i = 0; i < n; i += 16) { h[0][a[i]]++; h[1][a[i + 1]]++; h[2][a[i + 2]]++; }
+    const tot = n / 16;
+    for (let ch = 0; ch < 3; ch++) {
+      let acc = 0, l = 0, r = 255;
+      for (let v = 0; v < 256; v++) { acc += h[ch][v]; if (acc > tot * .005) { l = v; break; } }
+      acc = 0; for (let v = 255; v >= 0; v--) { acc += h[ch][v]; if (acc > tot * .005) { r = v; break; } }
+      lo[ch] = Math.min(l, 45); hi[ch] = Math.max(r, 210);
+    }
+  }
+  const cf = 1 + e.contrast / 100, bo = e.bright * 1.6, sf = 1 + e.sat / 100;
+  const luts = [0, 1, 2].map(ch => {
+    const L = new Uint8ClampedArray(256);
+    for (let v = 0; v < 256; v++) {
+      let t = (v - lo[ch]) / Math.max(1, hi[ch] - lo[ch]) * 255 + bo;
+      t = (t - 128) * cf + 128;
+      if (ch === 0) t += e.warm * .7; if (ch === 2) t -= e.warm * .7;
+      L[v] = t;
+    }
+    return L;
+  });
+  for (let i = 0; i < n; i += 4) {
+    let r = luts[0][a[i]], g = luts[1][a[i + 1]], b = luts[2][a[i + 2]];
+    if (sf !== 1) { const y = .299 * r + .587 * g + .114 * b; r = y + (r - y) * sf; g = y + (g - y) * sf; b = y + (b - y) * sf; }
+    a[i] = r; a[i + 1] = g; a[i + 2] = b;
+  }
+  if (e.sharp > 0) {
+    const k = e.sharp / 100 * .55, w = c.width, H = c.height, src = new Uint8ClampedArray(a);
+    for (let y = 1; y < H - 1; y++) for (let xx = 1; xx < w - 1; xx++) {
+      const i = (y * w + xx) * 4;
+      for (let ch = 0; ch < 3; ch++) {
+        const v = src[i + ch] * (1 + 4 * k) - k * (src[i + ch - 4] + src[i + ch + 4] + src[i + ch - w * 4] + src[i + ch + w * 4]);
+        a[i + ch] = v;
+      }
+    }
+  }
+  x.putImageData(id, 0, 0);
+  p.cache = c; p.cacheKey = key;
+  return c;
+}
+const SLIDERS = [["bright", "Light", -30, 30], ["contrast", "Contrast", -30, 40], ["sat", "Colour", -40, 40], ["warm", "Warmth", -30, 30], ["sharp", "Sharpen", 0, 100]];
+function renderEdits() {
+  const picks = photos.filter(p => p.pick);
+  $("#pickedChip").textContent = picks.length + " picked";
+  $("#pickedChip").className = "chip " + (picks.length ? "acc" : "");
+  const g = $("#editGrid");
+  if (!picks.length) { g.innerHTML = `<p class="hint">Pick photos in step 2 and they'll show up here for polishing.</p>`; return; }
+  g.innerHTML = picks.map(p => `<div class="ed" data-id="${p.id}">
+    <canvas aria-label="Edited photo, click to set the crop focus"></canvas>
+    ${p.issues && p.issues !== "none" ? `<div class="hint">Claude noticed: ${esc(p.issues)}</div>` : ""}
+    <label class="approve" style="font-size:12.5px"><input type="checkbox" data-k="auto" ${p.edit.auto ? "checked" : ""}> Auto levels</label>
+    ${SLIDERS.map(([k, l, mn, mx]) => `<label class="sl">${l}<input type="range" min="${mn}" max="${mx}" value="${p.edit[k]}" data-k="${k}"><output>${p.edit[k]}</output></label>`).join("")}
+    <div class="row"><button class="small" data-act="orig">Hold to see original</button><button class="small" data-act="reset">Reset</button></div>
+  </div>`).join("");
+  g.querySelectorAll(".ed").forEach(el => {
+    const p = photoById(el.dataset.id), cv = $("canvas", el);
+    let showOrig = false;
+    const draw = () => {
+      const src = showOrig ? p.img : processed(p);
+      const W = 600, H = Math.round(W * (src.height || src.naturalHeight) / (src.width || src.naturalWidth));
+      cv.width = W; cv.height = H;
+      const x = cv.getContext("2d"); x.drawImage(src, 0, 0, W, H);
+      // 4:5 crop guide around the focal point
+      const sw = p.img.naturalWidth, sh = p.img.naturalHeight, r = 4 / 5;
+      let cw = sw, ch = sh; if (sw / sh > r) cw = sh * r; else ch = sw / r;
+      const cx = clamp(p.focal.x * sw - cw / 2, 0, sw - cw), cy = clamp(p.focal.y * sh - ch / 2, 0, sh - ch);
+      const k = W / sw;
+      x.fillStyle = "rgba(10,14,28,.45)";
+      x.fillRect(0, 0, W, cy * k); x.fillRect(0, (cy + ch) * k, W, H); x.fillRect(0, cy * k, cx * k, ch * k); x.fillRect((cx + cw) * k, cy * k, W, ch * k);
+      x.strokeStyle = "#f2a33a"; x.lineWidth = 3; x.strokeRect(cx * k, cy * k, cw * k, ch * k);
+      x.beginPath(); x.arc(p.focal.x * W, p.focal.y * H, 9, 0, 7); x.fillStyle = "#f2a33a"; x.fill();
+    };
+    draw();
+    cv.onclick = e => { const b = cv.getBoundingClientRect(); p.focal = { x: clamp((e.clientX - b.left) / b.width, 0, 1), y: clamp((e.clientY - b.top) / b.height, 0, 1) }; draw(); redrawAll(); };
+    let t;
+    el.querySelectorAll("input[data-k]").forEach(inp => inp.oninput = () => {
+      const k = inp.dataset.k; p.edit[k] = inp.type === "checkbox" ? inp.checked : parseInt(inp.value);
+      if (inp.nextElementSibling) inp.nextElementSibling.textContent = inp.value;
+      clearTimeout(t); t = setTimeout(() => { draw(); redrawAll(); }, 120);
+    });
+    const ob = $("[data-act=orig]", el);
+    const on = () => { showOrig = true; draw(); }, off = () => { if (showOrig) { showOrig = false; draw(); } };
+    ob.addEventListener("pointerdown", on); ["pointerup", "pointerleave", "blur"].forEach(t => ob.addEventListener(t, off));
+    $("[data-act=reset]", el).onclick = () => { p.edit = { ...EDIT0 }; renderEdits(); redrawAll(); };
+  });
+}
+
+/* ---------- slide renderer (matches the existing @multiicon.official look) ---------- */
+const C = { navy: "#121a33", cream: "#f4f0e8", orange: "#f2a33a", white: "#ffffff", subDark: "#c8ccd8", subLight: "#3b4256", ph: "#2a3352" };
+const FONT = '"Inter", "Helvetica Neue", Arial, sans-serif';
+const fontsReady = Promise.all(["800 80px Inter", "700 30px Inter", "500 30px Inter", "400 30px Inter"].map(f => document.fonts.load(f))).catch(() => {});
+function wrap(x, text, maxW) {
+  const out = [];
+  String(text || "").split("\n").forEach(par => {
+    const words = par.split(/\s+/).filter(Boolean); let line = "";
+    words.forEach(w => { const t = line ? line + " " + w : w; if (x.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; });
+    if (line) out.push(line);
+  });
+  return out;
+}
+function fit(x, text, weight, size, min, maxW, maxLines) {
+  let s = size, lines;
+  do { x.font = `${weight} ${s}px ${FONT}`; lines = wrap(x, text, maxW); s -= 3; } while (lines.length > maxLines && s >= min);
+  return { lines, size: s + 3 };
+}
+function rrect(x, X, Y, w, h, r) { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); }
+function drawCover(x, p, X, Y, w, h, r) {
+  x.save(); if (r) { rrect(x, X, Y, w, h, r); x.clip(); }
+  if (!p) {
+    x.fillStyle = C.ph; x.fillRect(X, Y, w, h);
+    x.fillStyle = "#8f97b3"; x.font = `500 30px ${FONT}`; x.textAlign = "center"; x.fillText("Photo not loaded: add it in step 2", X + w / 2, Y + h / 2); x.textAlign = "left";
+  } else {
+    const src = processed(p), sr = src.width / src.height, dr = w / h;
+    let sw, sh; if (sr > dr) { sh = src.height; sw = sh * dr; } else { sw = src.width; sh = sw / dr; }
+    const sx = clamp(p.focal.x * src.width - sw / 2, 0, src.width - sw), sy = clamp(p.focal.y * src.height - sh / 2, 0, src.height - sh);
+    x.drawImage(src, sx, sy, sw, sh, X, Y, w, h);
+  }
+  x.restore();
+}
+function spaced(x, px) { if ("letterSpacing" in x) x.letterSpacing = px + "px"; }
+function drawSlide(x, s, i, n) {
+  const W = 1080, H = 1350, P = 84, MW = W - 2 * P;
+  const t = TPL.includes(s.template) ? s.template : "text-dark";
+  const dark = t === "photo" || t === "photo-card" || t === "text-dark";
+  const fg = dark ? C.white : C.navy, sub = dark ? C.subDark : C.subLight;
+  x.fillStyle = dark ? C.navy : C.cream; x.fillRect(0, 0, W, H);
+  const photo = s.photoId ? photoById(s.photoId) : null;
+  let anchor = "center", top = P, bottom = H - 170;
+  if (t === "photo") {
+    drawCover(x, photo, 0, 0, W, H, 0);
+    const g = x.createLinearGradient(0, H * .38, 0, H); g.addColorStop(0, "rgba(18,26,51,0)"); g.addColorStop(.55, "rgba(18,26,51,.82)"); g.addColorStop(1, "rgba(18,26,51,.96)");
+    x.fillStyle = g; x.fillRect(0, 0, W, H); anchor = "bottom";
+  } else if (t === "photo-card" || t === "photo-light") {
+    drawCover(x, photo, P, P, MW, 600, 26); top = P + 600 + 64; anchor = "top";
+  }
+  // measure text block
+  const photoT = PHOTO_TPL.has(t);
+  const blocks = [];
+  if (s.kicker && t !== "number") { x.font = `700 26px ${FONT}`; blocks.push({ k: "kicker", lines: [String(s.kicker).toUpperCase()], size: 26, lh: 1, gap: 22 }); }
+  if (t === "number" && s.kicker) blocks.push({ k: "num", lines: [String(s.kicker)], size: 200, lh: .95, gap: 24 });
+  if (s.headline) { const f = fit(x, s.headline, 800, photoT ? 70 : 84, 44, MW, photoT ? 4 : 5); blocks.push({ k: "head", ...f, lh: 1.06, gap: 26 }); }
+  if (s.body) { const f = fit(x, s.body, 400, 33, 26, MW, photoT ? 4 : 7); blocks.push({ k: "body", ...f, lh: 1.42, gap: 0 }); }
+  if (t === "cta") blocks.push({ k: "handle", lines: ["Follow @multiicon.official"], size: 32, lh: 1, gap: 0 });
+  const bh = b => b.lines.length * b.size * b.lh;
+  const total = blocks.reduce((a, b, j) => a + bh(b) + (j < blocks.length - 1 ? b.gap : 0), 0);
+  let y = anchor === "top" ? top : anchor === "bottom" ? bottom - total : Math.max(P, (H - 120 - total) / 2);
+  x.textBaseline = "top";
+  blocks.forEach((b, j) => {
+    if (b.k === "kicker") { x.font = `700 26px ${FONT}`; spaced(x, 3); x.fillStyle = C.orange; }
+    else if (b.k === "num") { x.font = `800 200px ${FONT}`; spaced(x, -6); x.fillStyle = C.orange; }
+    else if (b.k === "head") { x.font = `800 ${b.size}px ${FONT}`; spaced(x, -1.5); x.fillStyle = fg; }
+    else if (b.k === "body") { x.font = `400 ${b.size}px ${FONT}`; spaced(x, 0); x.fillStyle = sub; }
+    else { x.font = `700 32px ${FONT}`; spaced(x, 0); x.fillStyle = fg; }
+    b.lines.forEach(l => { x.fillText(l, P, y); y += b.size * b.lh; });
+    if (j < blocks.length - 1) y += b.k === "body" ? 0 : b.gap;
+    if (b.k === "body" && blocks[j + 1]) y += 30;
+  });
+  spaced(x, 0);
+  // footer wordmark
+  const fy = H - 82;
+  x.font = `800 24px ${FONT}`; spaced(x, 4.5);
+  const parts = [["MULTI", fg], ["I", C.orange], ["CON", fg]]; let fx = P;
+  parts.forEach(([tx, col]) => { x.fillStyle = col; x.fillText(tx, fx, fy); fx += x.measureText(tx).width; });
+  spaced(x, 2); x.font = `700 22px ${FONT}`; x.fillStyle = fg; x.textAlign = "right";
+  x.fillText(n > 1 ? `${i + 1} / ${n}` : "@multiicon.official", W - P, fy + 2); x.textAlign = "left"; spaced(x, 0);
+}
+function slideCanvas(s, i, n) { const c = document.createElement("canvas"); c.width = 1080; c.height = 1350; drawSlide(c.getContext("2d"), s, i, n); return c; }
+
+/* ---------- posts ---------- */
+const opt = p => p.options[p.sel] || null;
+const confirmCount = o => !o ? 0 : (JSON.stringify([o.caption, o.slides, o.alt]).match(/\[CONFIRM/gi) || []).length;
+const EXAMPLE = { id: "example", kind: "example", day: "", time: "", topic: "Example from last week (Diwali). Your generated posts replace this.", sel: 0, slide: 0, approved: false, state: "ready",
+  options: [{ label: "Diwali wish", format: "single", hook: "Six industries, 50K+ customers, one wish this Diwali.",
+    caption: "Six industries, 50K+ customers, one wish this Diwali.\n\nFrom brokers and travel agents to newsrooms and social organisations, the people we build for keep India moving. This festival, we wish each of you light, prosperity and a fresh start.\n\nHappy Diwali and a happy New Year from all of us at Multiicon ✨",
+    hashtags: ["#HappyDiwali", "#Multiicon", "#Rajkot", "#Gujarat"], alt: "Text slide wishing Happy Diwali from Multiicon.", why: "Festive posts with a real brand fact get shared more than generic greetings.", risk: "None.",
+    slides: [{ template: "text-dark", kicker: "Happy Diwali · Saal Mubarak", headline: "Six industries. 50K+ customers. One wish.", body: "Light, prosperity and a fresh start, from all of us." }] }] };
+
+function renderPosts() {
+  const g = $("#posts");
+  const list = S.posts.length ? S.posts : [EXAMPLE];
+  g.innerHTML = "";
+  list.forEach(p => g.appendChild(buildCard(p)));
+  renderSched();
+}
+function kindChip(p) { return p.kind === "event" ? `<span class="chip acc">Event post</span>` : p.kind === "example" ? `<span class="chip">Example</span>` : `<span class="chip">Content post</span>`; }
+function buildCard(p) {
+  const el = document.createElement("article"); el.className = "post" + (p.approved ? " approved" : ""); el.dataset.id = p.id;
+  const when = p.kind === "example" ? "" : `<span class="when"><input type="date" class="pday" value="${esc(p.day)}" aria-label="Post date"><input type="time" class="ptime" value="${esc(p.time)}" aria-label="Post time"></span>`;
+  if (p.state !== "ready") {
+    el.innerHTML = `<div class="phead">${kindChip(p)}${when}</div><p class="topic">${esc(p.topic || "")}</p>
+      <div class="skel"></div><div class="live">${p.state === "writing" ? "Writing options…" : p.state === "error" ? esc(p.error || "Failed") : "Waiting its turn…"}</div>
+      ${p.state === "error" ? `<button class="small" data-act="regen">Try again</button>` : ""}`;
+    wireWhen(el, p);
+    const rb = $("[data-act=regen]", el); if (rb) rb.onclick = () => runPosts([p]);
+    return el;
+  }
+  el.innerHTML = `<div class="phead">${kindChip(p)}<span class="chip pstate"></span>${when}</div>
+    <p class="topic">${esc(p.topic || "")}</p>
+    <div class="opts" role="group" aria-label="Options">${p.options.map((o, i) => `<button data-o="${i}" aria-pressed="${i === p.sel}">${String.fromCharCode(65 + i)} · ${esc(o.label || o.format)}</button>`).join("")}</div>
+    <div class="pv"><canvas width="1080" height="1350"></canvas></div>
+    <div class="pvnav"><button class="small" data-act="prev" aria-label="Previous slide">←</button><span class="dots"></span><button class="small" data-act="next" aria-label="Next slide">→</button></div>
+    <details class="se"><summary>Edit this slide</summary><div class="grid">
+      <label class="field"><span>Layout</span><select class="s-tpl">${TPL.map(t => `<option>${t}</option>`).join("")}</select></label>
+      <label class="field s-phw"><span>Photo</span><select class="s-ph"></select></label>
+      <label class="field"><span>Label</span><input type="text" class="s-kick"></label>
+      <label class="field"><span>Headline</span><textarea class="s-head" rows="2" style="min-height:52px"></textarea></label>
+      <label class="field"><span>Body</span><textarea class="s-body" rows="3"></textarea></label>
+      <div class="row"><button class="small" data-act="addslide">Add slide after</button><button class="small" data-act="delslide">Remove slide</button></div>
+    </div></details>
+    <label class="field"><span>Caption</span><textarea class="cap" rows="7"></textarea><span class="cnt"></span></label>
+    <label class="field"><span>Hashtags</span><input type="text" class="tags"></label>
+    <label class="field"><span>Alt text</span><input type="text" class="alt"></label>
+    <div class="meta"><div><b>Why it could work:</b> <span class="why"></span></div><div><b>Check:</b> <span class="risk"></span></div></div>
+    <div class="ask"><input type="text" class="askin" placeholder="Ask for a change, e.g. shorter and more playful" aria-label="Change request"><button class="small" data-act="rewrite">Rewrite</button></div>
+    <div class="row"><button class="small" data-act="regen">Three new options</button><button class="small" data-act="visual">Generate visual with AI</button><span class="status pstatus"></span></div>
+    <div class="visuals" hidden></div>
+    <label class="approve"><input type="checkbox" class="appr"> <span class="apprtext">I've checked the facts, the photos and the caption. Approve this option.</span></label>
+    <button class="go" data-act="post">Post / Schedule</button>
+    <div class="panel" hidden></div>`;
+  wireWhen(el, p);
+  const cv = $(".pv canvas", el);
+  el.querySelectorAll(".opts button").forEach(b => b.onclick = () => { p.sel = +b.dataset.o; p.slide = 0; p.approved = false; save(); fill(el, p); });
+  $("[data-act=prev]", el).onclick = () => { const o = opt(p); p.slide = (p.slide - 1 + o.slides.length) % o.slides.length; fillSlide(el, p); };
+  $("[data-act=next]", el).onclick = () => { const o = opt(p); p.slide = (p.slide + 1) % o.slides.length; fillSlide(el, p); };
+  const sv = (cls, fn) => { $(cls, el).oninput = e => { fn(e.target.value); p.approved = false; save(); drawCard(el, p); updateApproveGate(el); }; };
+  sv(".s-tpl", v => { cur(p).template = v; fillSlide(el, p); });
+  sv(".s-ph", v => { cur(p).photoId = v || null; });
+  sv(".s-kick", v => { cur(p).kicker = v; });
+  sv(".s-head", v => { cur(p).headline = v; });
+  sv(".s-body", v => { cur(p).body = v; });
+  sv(".cap", v => { opt(p).caption = v; $(".cnt", el).textContent = v.length + " / 2200"; });
+  sv(".tags", v => { opt(p).hashtags = v.split(/[\s,]+/).filter(Boolean); });
+  sv(".alt", v => { opt(p).alt = v; });
+  $("[data-act=addslide]", el).onclick = () => { const o = opt(p); if (o.slides.length >= 10) return; o.slides.splice(p.slide + 1, 0, { template: "text-light", kicker: "", headline: "New slide", body: "" }); p.slide++; p.approved = false; save(); fill(el, p); };
+  $("[data-act=delslide]", el).onclick = () => { const o = opt(p); if (o.slides.length <= 1) return; o.slides.splice(p.slide, 1); p.slide = Math.max(0, p.slide - 1); p.approved = false; save(); fill(el, p); };
+  $("[data-act=rewrite]", el).onclick = () => rewrite(el, p);
+  $(".askin", el).onkeydown = e => { if (e.key === "Enter") rewrite(el, p); };
+  $("[data-act=regen]", el).onclick = () => runPosts([p]);
+  $("[data-act=visual]", el).onclick = () => document.dispatchEvent(new CustomEvent("ps:visual", { detail: { el, p } }));
+  $(".appr", el).onchange = e => { p.approved = e.target.checked; save(); el.classList.toggle("approved", p.approved); updateApproveGate(el); renderSched(); };
+  $("[data-act=post]", el).onclick = () => { if (window.PSStudio && window.PSStudio.post) window.PSStudio.post(el, p); else openPostPanel(el, p); };
+  if (p.kind === "example") { el.querySelectorAll("[data-act=regen],[data-act=rewrite],.askin,.appr,[data-act=post]").forEach(b => b.disabled = true); $(".apprtext", el).textContent = "Example only."; }
+  fill(el, p);
+  return el;
+}
+function wireWhen(el, p) {
+  const d = $(".pday", el), t = $(".ptime", el);
+  if (d) d.onchange = () => { p.day = d.value; save(); renderSched(); };
+  if (t) t.onchange = () => { p.time = t.value; save(); renderSched(); };
+}
+const cur = p => opt(p).slides[p.slide];
+function fill(el, p) {
+  const o = opt(p);
+  el.querySelectorAll(".opts button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.o === p.sel));
+  $(".cap", el).value = o.caption || ""; $(".cnt", el).textContent = (o.caption || "").length + " / 2200";
+  $(".tags", el).value = (o.hashtags || []).join(" ");
+  $(".alt", el).value = o.alt || "";
+  $(".why", el).textContent = o.why || "";
+  $(".risk", el).textContent = o.risk || "";
+  $(".appr", el).checked = !!p.approved; el.classList.toggle("approved", !!p.approved);
+  fillSlide(el, p); updateApproveGate(el);
+}
+function fillSlide(el, p) {
+  const o = opt(p); p.slide = clamp(p.slide || 0, 0, o.slides.length - 1); const s = cur(p);
+  $(".s-tpl", el).value = TPL.includes(s.template) ? s.template : "text-dark";
+  const ids = p.kind === "event" ? (p.photoIds || []) : photos.filter(x => x.pick).map(x => x.id);
+  const all = [...new Set([...(s.photoId ? [s.photoId] : []), ...ids])];
+  $(".s-ph", el).innerHTML = `<option value="">None</option>` + all.map((id, i) => { const ph = photoById(id); return `<option value="${id}">${ph ? esc((ph.desc || ph.name).slice(0, 40)) : "Photo " + (i + 1) + " (not loaded)"}</option>`; }).join("");
+  $(".s-ph", el).value = s.photoId || "";
+  $(".s-phw", el).hidden = !PHOTO_TPL.has(s.template);
+  $(".s-kick", el).value = s.kicker || ""; $(".s-head", el).value = s.headline || ""; $(".s-body", el).value = s.body || "";
+  const n = o.slides.length; $(".dots", el).textContent = n > 1 ? `Slide ${p.slide + 1} of ${n}` : "Single image";
+  el.querySelectorAll("[data-act=prev],[data-act=next]").forEach(b => b.hidden = n < 2);
+  drawCard(el, p);
+}
+function drawCard(el, p) {
+  const o = opt(p); if (!o) return; const cv = $(".pv canvas", el); if (!cv) return;
+  fontsReady.then(() => drawSlide(cv.getContext("2d"), o.slides[p.slide], p.slide, o.slides.length));
+}
+let redrawT;
+function redrawAll() { clearTimeout(redrawT); redrawT = setTimeout(() => document.querySelectorAll(".post").forEach(el => { const p = S.posts.find(x => x.id === el.dataset.id) || (el.dataset.id === "example" ? EXAMPLE : null); if (p && p.state === "ready" && $(".pv canvas", el)) drawCard(el, p); }), 60); }
+function updateApproveGate(el) {
+  const p = S.posts.find(x => x.id === el.dataset.id); if (!p || p.state !== "ready") return;
+  const o = opt(p), n = confirmCount(o), needConsent = p.kind === "event" && !S.ev.consent;
+  const box = $(".appr", el), txt = $(".apprtext", el), chip = $(".pstate", el), pb = $("[data-act=post]", el);
+  const blocked = n > 0 || needConsent;
+  if (blocked && p.approved) { p.approved = false; save(); }
+  box.disabled = blocked; box.checked = !!p.approved; el.classList.toggle("approved", !!p.approved);
+  txt.textContent = n > 0 ? `Fill ${n} [CONFIRM] gap${n > 1 ? "s" : ""} in the caption or slides first.` : needConsent ? "Tick the photo consent box in step 2 first." : "I've checked the facts, the photos and the caption. Approve this option.";
+  chip.className = "chip pstate " + (p.exported ? "ok" : p.approved ? "ok" : blocked ? "bad" : "warn");
+  chip.textContent = p.exported ? "Downloaded" : p.approved ? "Approved" : blocked ? "Needs facts" : "Draft";
+  pb.disabled = !p.approved;
+  $("#approvedChip").textContent = S.posts.filter(x => x.approved).length + " approved";
+}
+
+/* ---------- generation ---------- */
+let ctl = null;
+function photoList(p) { return (p.photoIds || []).map((id, i) => { const ph = photoById(id); return `${i + 1}: ${ph ? (ph.desc || ph.name) + (ph.score != null ? ` (score ${ph.score})` : "") : "photo"}`; }).join("\n"); }
+function normOption(o, p) {
+  const slides = (Array.isArray(o.slides) ? o.slides : []).slice(0, 10).map(s => {
+    const tpl = TPL.includes(s.template) ? s.template : "text-dark";
+    let photoId = null;
+    if (p.kind === "event") { const k = parseInt(s.photo); photoId = (p.photoIds || [])[(k || 1) - 1] || (p.photoIds || [])[0] || null; }
+    return { template: photoId || !PHOTO_TPL.has(tpl) ? tpl : "text-dark", photoId: PHOTO_TPL.has(tpl) ? photoId : null, kicker: String(s.kicker || ""), headline: String(s.headline || ""), body: String(s.body || "") };
+  });
+  if (!slides.length) slides.push({ template: "text-dark", kicker: "", headline: String(o.hook || "Headline"), body: "" });
+  return { label: String(o.label || "Option"), format: String(o.format || (slides.length > 1 ? "carousel" : "single")), hook: String(o.hook || ""), caption: String(o.caption || ""),
+    hashtags: (Array.isArray(o.hashtags) ? o.hashtags : String(o.hashtags || "").split(/\s+/)).map(String).filter(Boolean).slice(0, 12).map(h => h.startsWith("#") ? h : "#" + h),
+    alt: String(o.alt || ""), why: String(o.why || ""), risk: String(o.risk || ""), slides };
+}
+function optionForPrompt(o, p) {
+  return JSON.stringify({ ...o, slides: o.slides.map(s => ({ template: s.template, photo: s.photoId ? (p.photoIds || []).indexOf(s.photoId) + 1 || null : null, kicker: s.kicker, headline: s.headline, body: s.body })) });
+}
+function postPrompt(p) {
+  const others = S.posts.filter(x => x !== p && x.options && x.options.length).map(x => "- " + (x.topic || "") + ": " + (opt(x)?.hook || "")).join("\n") || "none yet";
+  const when = `${fmtDay(p.day)} at ${p.time} IST`;
+  if (p.kind === "event") return `${BRAND}\n\n${VOICE}\n\n${TEMPLATES}\n
+TASK: Write 3 clearly different options for one Instagram post about Multiicon's event last week. It goes out ${when}.
+EVENT FACTS (use only these; if a post needs a fact that is missing, write [CONFIRM: what is needed]):
+- Name: ${S.ev.name || "[not given]"}
+- Date and place: ${S.ev.when || "[not given]"}
+- What happened: ${S.ev.what || "[not given]"}
+- Who was there: ${S.ev.who || "[not given]"}
+PHOTOS for this post, best first (refer to them by number in "photo"):
+${photoList(p)}
+Make the three options different angles, for example: a warm thank-you recap carousel, one standout moment told as a short story, and a people-first or behind-the-scenes angle. Slide 1 must stop the scroll. Use photo templates for photo slides; you may end with a "cta" slide.
+Other posts planned this week (don't repeat them):\n${others}
+Reply with only JSON: {"options":[${OPTION_SHAPE}, ...]} with exactly 3 options.`;
+  return `${BRAND}\n\n${VOICE}\n\n${TEMPLATES}\n
+TASK: Write 3 clearly different options for one Instagram post going out ${when}.
+TOPIC: ${p.topic || "your best idea for the account this week"}
+ANGLE: ${p.angle || "-"}
+${p.verify ? "FACT TO VERIFY: " + p.verify + " (put it in the risk field)" : ""}
+Team notes on trends: ${S.trends || "none"}
+Things the team wants to push: ${S.focus || "none"}
+There are no photos for this post, so use text templates only (text-dark, text-light, number, cta). Mix formats across the three options: at least one carousel that teaches or lists something people will save, and one punchy single image. Only state facts from the brand facts, the team notes or widely known public facts; mark anything else [CONFIRM: ...]. Cite a source in the caption when you mention news.
+Other posts planned this week (don't repeat them):\n${others}
+Reply with only JSON: {"options":[${OPTION_SHAPE}, ...]} with exactly 3 options.`;
+}
+function liveBox(p) { const el = document.querySelector(`.post[data-id="${p.id}"] .live`); return el; }
+function replaceCard(p) { const old = document.querySelector(`.post[data-id="${p.id}"]`); const n = buildCard(p); if (old) old.replaceWith(n); else $("#posts").appendChild(n); renderSched(); }
+async function runPosts(list) {
+  if (!sample) return;
+  ctl = ctl || new AbortController(); $("#stopBtn").hidden = false;
+  list.forEach(p => { if (p.state === "ready" && p.options.length) p.keep = p.options; p.state = "waiting"; replaceCard(p); });
+  for (const p of list) {
+    if (ctl.signal.aborted) { p.state = p.keep ? "ready" : "error"; p.error = "Stopped."; replaceCard(p); continue; }
+    p.state = "writing"; replaceCard(p);
+    try {
+      const res = await sample.json(postPrompt(p), { signal: ctl.signal, cache: false,
+        onText: ({ text }) => { const b = liveBox(p); if (b) b.textContent = "Writing… " + text.slice(-420); } });
+      const os = (res && Array.isArray(res.options) ? res.options : Array.isArray(res) ? res : []).slice(0, 3).map(o => normOption(o, p));
+      if (!os.length) throw { code: "invalid_json" };
+      p.options = os; p.sel = 0; p.slide = 0; p.approved = false; p.exported = false; p.state = "ready"; delete p.keep;
+    } catch (e) {
+      if (p.keep) { p.options = p.keep; p.state = "ready"; delete p.keep; setStatus($("#genStatus"), errCopy(e), true); }
+      else { p.state = "error"; p.error = errCopy(e); }
+    }
+    save(); replaceCard(p);
+  }
+  ctl = null; $("#stopBtn").hidden = true;
+}
+$("#stopBtn").onclick = () => ctl && ctl.abort();
+$("#genBtn").onclick = async () => {
+  const st = $("#genStatus");
+  if (!S.agreed) { setStatus(st, "Agree the number of posts in step 1 first.", true); $("#s1").scrollIntoView({ behavior: "smooth" }); return; }
+  const E = Math.min(S.eventCount, S.postCount), K = S.postCount - E;
+  const picks = photos.filter(p => p.pick).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  if (E > 0 && !picks.length) { setStatus(st, "Add and pick event photos in step 2 first, or set event posts to None.", true); return; }
+  if (S.posts.some(p => p.approved)) { if (!genArmed) { genArmed = true; setStatus(st, "This replaces the current posts, including approved ones. Press again to go ahead."); setTimeout(() => genArmed = false, 6000); return; } }
+  genArmed = false;
+  $("#genBtn").disabled = true;
+  const posts = [];
+  for (let j = 0; j < E; j++) posts.push({ id: uid(), kind: "event", day: addDays(S.weekStart, j), time: "19:00", topic: E > 1 ? `Event recap, part ${j + 1}` : "Event recap", photoIds: picks.filter((_, i) => i % E === j).slice(0, 10).map(p => p.id), options: [], sel: 0, slide: 0, approved: false, state: "waiting" });
+  S.posts = posts; renderPosts();
+  if (K > 0) {
+    setStatus(st, "Planning the week…");
+    let slots = [];
+    try {
+      const r = await sample.json(`${BRAND}
+
+Plan ${K} Instagram posts (not counting ${E} event-recap post${E === 1 ? "" : "s"} already set for ${posts.map(p => fmtDay(p.day)).join(", ") || "no days"}) for @multiicon.official in the week ${S.weekStart} (Monday) to ${addDays(S.weekStart, 6)}.
+Use: festivals or observances in India or internationally that fall in this week (only ones you are confident about, and set "verify" to what should be double-checked), the team's trend notes, things the team wants to push, product spotlights (Market Maya, startups, enterprise products), people and culture. Balance educating, showing work, and celebrating. Spread posts over different days than the event posts where possible. Pick times that suit an Indian professional audience (for example 09:00, 13:00, 19:00).
+Team trend notes: ${S.trends || "none"}
+Things to push: ${S.focus || "none"}
+Reply with only JSON: {"slots":[{"day":"YYYY-MM-DD","time":"HH:MM","topic":"short topic","angle":"one line","verify":"what to fact-check or empty"}]} with exactly ${K} slots.`, { modelTier: "default", cache: false });
+      slots = Array.isArray(r.slots) ? r.slots : [];
+    } catch (e) { setStatus(st, errCopy(e) + " Using a simple spread instead.", true); }
+    for (let j = 0; j < K; j++) {
+      const s = slots[j] || {};
+      const dflt = addDays(S.weekStart, Math.min(6, E + Math.round(j * (7 - E) / Math.max(1, K))));
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(s.day || "") && s.day >= S.weekStart && s.day <= addDays(S.weekStart, 6) ? s.day : dflt;
+      posts.push({ id: uid(), kind: "idea", day, time: /^\d{2}:\d{2}$/.test(s.time || "") ? s.time : "11:00", topic: String(s.topic || "Content post"), angle: String(s.angle || ""), verify: String(s.verify || ""), options: [], sel: 0, slide: 0, approved: false, state: "waiting" });
+    }
+  }
+  posts.sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time));
+  S.posts = posts; save(); renderPosts();
+  setStatus(st, `Writing ${posts.length} posts, three options each. They appear as they're ready.`);
+  await runPosts(posts);
+  setStatus(st, S.posts.every(p => p.state === "ready") ? "Done. Review each post in step 5." : $("#genStatus").textContent);
+  $("#genBtn").disabled = !sample;
+};
+let genArmed = false;
+async function rewrite(el, p) {
+  const ask = $(".askin", el).value.trim(), st = $(".pstatus", el), b = $("[data-act=rewrite]", el);
+  if (!ask) { setStatus(st, "Type what you'd like changed first.", true); return; }
+  if (!sample) return;
+  b.disabled = true; setStatus(st, "Rewriting…");
+  try {
+    const r = await sample.json(`${BRAND}\n\n${VOICE}\n\n${TEMPLATES}\n
+Here is one Instagram post option as JSON:
+${optionForPrompt(opt(p), p)}
+${p.kind === "event" ? `Event facts: ${JSON.stringify(S.ev)}\nPhotos (by number):\n${photoList(p)}` : `Topic: ${p.topic}`}
+Change it as the team asks: "${ask}"
+Keep everything the request doesn't touch. Keep [CONFIRM: ...] markers unless the request supplies the fact. Reply with only the revised option as JSON in the same shape: ${OPTION_SHAPE}`, { cache: false,
+      onText: ({ text }) => setStatus(st, "Rewriting… " + text.length + " characters") });
+    p.options[p.sel] = normOption(r && r.slides ? r : (r.options || [])[0] || {}, p);
+    p.approved = false; p.exported = false; save(); fill(el, p); $(".askin", el).value = ""; setStatus(st, "Rewritten. Approve again when you're happy.");
+  } catch (e) { setStatus(st, errCopy(e), true); }
+  b.disabled = false;
+}
+
+/* ---------- post / schedule (stub until Instagram is connected) ---------- */
+const fullCaption = o => (o.caption || "").trim() + (o.hashtags && o.hashtags.length ? "\n\n" + o.hashtags.join(" ") : "");
+const slug = s => String(s || "post").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "post";
+async function addPostToZip(zip, p, folder) {
+  await fontsReady;
+  const o = opt(p), f = folder ? zip.folder(folder) : zip;
+  for (let i = 0; i < o.slides.length; i++) {
+    const blob = await new Promise(r => slideCanvas(o.slides[i], i, o.slides.length).toBlob(r, "image/jpeg", .92));
+    f.file(`${String(i + 1).padStart(2, "0")}.jpg`, blob);
+  }
+  f.file("caption.txt", `${fmtDay(p.day)} ${p.time} IST\n\n${fullCaption(o)}\n\nAlt text: ${o.alt}\n`);
+}
+async function saveZip(zip, name, st) {
+  if (!window.JSZip) { setStatus(st, "The zip library didn't load. Reload the page and try again.", true); return false; }
+  const data = await zip.generateAsync({ type: "blob" });
+  if (!downloads) { setStatus(st, "Downloads aren't available in this view. Open the page on claude.ai.", true); return false; }
+  try { await downloads.save({ filename: name, data }); setStatus(st, "Saved " + name + "."); return true; }
+  catch (e) { setStatus(st, e && e.code === "declined" ? "Download cancelled." : "Couldn't save the file (" + (e && e.code || "error") + ").", e && e.code !== "declined"); return false; }
+}
+function openPostPanel(el, p) {
+  const pn = $(".panel", el); pn.hidden = false;
+  pn.innerHTML = `<b>Not posted.</b> Instagram isn't connected yet, so this page can't publish or schedule. Download the post and publish it from the Instagram app on ${esc(fmtDay(p.day))} at ${esc(p.time)}.
+    <div class="row"><button class="small primary" data-x="zip">Download post (.zip)</button><button class="small" data-x="copy">Copy caption</button></div><span class="status"></span>
+    <span class="hint">Real posting needs the Meta developer app, the Instagram account linked through official login, and a small server to hold the token and run the schedule.</span>`;
+  const st = $(".status", pn);
+  $("[data-x=zip]", pn).onclick = async () => {
+    const zip = new JSZip(); setStatus(st, "Preparing images…");
+    await addPostToZip(zip, p, "");
+    if (await saveZip(zip, `multiicon-${p.day}-${slug(p.topic)}.zip`, st)) { p.exported = true; save(); updateApproveGate(el); renderSched(); }
+  };
+  $("[data-x=copy]", pn).onclick = () => {
+    const text = fullCaption(opt(p));
+    navigator.clipboard.writeText(text).then(() => setStatus(st, "Caption copied."), () => { const ta = $(".cap", el); ta.focus(); ta.select(); setStatus(st, "Copy was blocked here. The caption is selected; press Ctrl+C (hashtags are in the field below)."); });
+  };
+}
+$("#exportAll").onclick = async () => {
+  const st = $("#exportStatus"), ok = S.posts.filter(p => p.approved && p.state === "ready");
+  if (!ok.length) { setStatus(st, "Approve at least one post first.", true); return; }
+  setStatus(st, "Preparing " + ok.length + " posts…");
+  const zip = new JSZip();
+  for (const p of ok) await addPostToZip(zip, p, `${p.day}_${p.time.replace(":", "")}_${slug(p.topic)}`);
+  zip.file("schedule.txt", ok.map(p => `${fmtDay(p.day)} ${p.time}  ${p.topic}  (${opt(p).slides.length} slide${opt(p).slides.length > 1 ? "s" : ""})`).join("\n") + "\n");
+  if (await saveZip(zip, `multiicon-week-${S.weekStart}.zip`, st)) { ok.forEach(p => p.exported = true); save(); document.querySelectorAll(".post").forEach(updateApproveGate); renderSched(); }
+};
+function renderSched() {
+  const t = $("#sched");
+  if (!S.posts.length) { t.innerHTML = ""; return; }
+  const rows = [...S.posts].sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time));
+  t.innerHTML = `<thead><tr><th>When</th><th>Post</th><th>Status</th></tr></thead><tbody>` + rows.map(p => `<tr><td class="tab">${esc(fmtDay(p.day))} ${esc(p.time)}</td><td>${esc(p.topic)}${p.state === "ready" ? " · " + esc(opt(p).label) : ""}</td><td>${p.exported ? "Downloaded" : p.approved ? "Approved" : p.state === "ready" ? "Draft" : p.state === "error" ? "Failed" : "Writing"}</td></tr>`).join("") + "</tbody>";
+  $("#approvedChip").textContent = S.posts.filter(x => x.approved).length + " approved";
+}
+
+/* ---------- hooks for studio.js (server features) ---------- */
+window.PS = { get S() { return S; }, photos, photoById, renderPhotos, renderEdits, redrawAll, opt, cur, slideCanvas, save, fill, fillSlide, replaceCard, updateApproveGate, renderSched, fullCaption, slug, setStatus, errCopy, fontsReady, esc, uid, EDIT0, PHOTO_TPL, get sample() { return sample; } };
+document.dispatchEvent(new CustomEvent("ps:ready"));
+
+/* ---------- buttons + boot ---------- */
+function refreshButtons() {
+  const on = !!sample;
+  $("#suggestBtn").disabled = !on;
+  $("#pickBtn").disabled = !on || !photos.length;
+  $("#genBtn").disabled = !on || !!ctl;
+}
+S.posts.forEach(p => { if (p.state !== "ready") { p.state = p.options && p.options.length ? "ready" : "error"; p.error = "Interrupted. Try again."; } });
+renderAgree(); renderPhotos(); renderEdits(); renderPosts();
+fontsReady.then(redrawAll);
+})();
+</script>
+<script src="/studio.js"></script>
+</body>
+</html>

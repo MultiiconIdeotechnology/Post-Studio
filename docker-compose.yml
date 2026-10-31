@@ -1,0 +1,39 @@
+# Plug and play: copy .env.example to .env, fill the keys you have, then `docker compose up -d`.
+# Put a reverse proxy (Caddy, Nginx, Traefik) in front for HTTPS on your subdomain, or use
+# docker-compose.caddy.yml which adds Caddy with automatic certificates.
+services:
+  app:
+    build: .
+    image: post-studio:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://poststudio:${POSTGRES_PASSWORD:-poststudio}@db:5432/poststudio
+      MEDIA_DIR: /data/media
+      PORT: "8080"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - media:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: poststudio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-poststudio}
+      POSTGRES_DB: poststudio
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U poststudio -d poststudio"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
+  media:
