@@ -10,12 +10,15 @@ RUN npm run build && npm prune --omit=dev
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production PORT=8080 MEDIA_DIR=/data/media
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends curl fonts-inter fonts-ibm-plex && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y --no-install-recommends curl fonts-inter fontconfig && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /data/media && chown -R node:node /data /app
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./
 COPY --chown=node:node web ./web
+# IBM Plex (SIL Open Font Licence) for Claude-designed slides; not packaged in Debian bookworm.
+COPY fonts/ibm-plex /usr/local/share/fonts/ibm-plex
+RUN fc-cache -f >/dev/null 2>&1 || true
 COPY --chown=node:node src/db/migrations ./dist/db/migrations
 USER node
 EXPOSE 8080
