@@ -98,3 +98,11 @@ describe("anthropic errors", async () => {
     expect(explainAnthropicError(new Error("fetch failed"), "m").message).toMatch(/Could not reach/);
   });
 });
+
+describe("anthropic workspace error", async () => {
+  const { explainAnthropicError } = await import("../src/ai/claude.js");
+  it("explains an organisation-scoped key", () => {
+    const e = Object.assign(new Error("x"), { status: 400, error: { error: { type: "invalid_request_error", message: "This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header" } } });
+    expect(explainAnthropicError(e, "m").message).toMatch(/ANTHROPIC_WORKSPACE_ID/);
+  });
+});

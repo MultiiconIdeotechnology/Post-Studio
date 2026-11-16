@@ -14,6 +14,8 @@ const Env = z.object({
   TIMEZONE: z.string().default("Asia/Kolkata"),
 
   ANTHROPIC_API_KEY: z.string().optional(),
+  // Only for an organisation-scoped key (sk-ant-usr-...): the workspace to bill, e.g. wrkspc_...
+  ANTHROPIC_WORKSPACE_ID: z.string().optional(),
   CLAUDE_MODEL: z.string().default("claude-opus-5-5"),
   CLAUDE_MODEL_QUICK: z.string().default("claude-opus-5-5"),
   CLAUDE_MAX_TOKENS: z.coerce.number().default(16000),

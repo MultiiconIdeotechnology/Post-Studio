@@ -31,7 +31,10 @@ export class ClaudeError extends Error {
 let client: Anthropic | null = null;
 function getClient(): Anthropic {
   if (!config.ANTHROPIC_API_KEY) throw new ClaudeError("not_configured", "ANTHROPIC_API_KEY is not set");
-  client ??= new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
+  client ??= new Anthropic({
+    apiKey: config.ANTHROPIC_API_KEY,
+    defaultHeaders: config.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": config.ANTHROPIC_WORKSPACE_ID } : undefined,
+  });
   return client;
 }
 
@@ -104,6 +107,9 @@ export function explainAnthropicError(e: unknown, model: string): ClaudeError {
   const body = (e as { error?: { error?: { message?: string; type?: string } } }).error?.error;
   const upstream = body?.message ?? (e instanceof Error ? e.message : String(e));
   const reason = `Anthropic says: ${upstream}${status ? ` (HTTP ${status})` : ""}`;
+  if (/anthropic-workspace-id|not scoped to a workspace/i.test(upstream)) {
+    return new ClaudeError("auth", "This Anthropic key belongs to the whole organisation, not one workspace. Either create a key inside a workspace in the Claude Console and put it in ANTHROPIC_API_KEY, or add ANTHROPIC_WORKSPACE_ID=<workspace id> to .env, then restart. " + reason);
+  }
   if (status === 401) return new ClaudeError("auth", `The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in .env. ${reason}`);
   if (status === 403) return new ClaudeError("auth", `This API key is not allowed to make this call. ${reason}`);
   if (/credit balance|billing|purchase credits/i.test(upstream)) return new ClaudeError("billing", `The Anthropic account has no usable credit. Check Plans & Billing in the Claude Console. ${reason}`);
