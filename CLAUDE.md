@@ -39,7 +39,10 @@ src/publish/scheduler.ts pg-boss queue "publish-post"; runPublish() moves post s
 src/routes/              ai.ts, images.ts, plans.ts (plans, posts, approve, schedule)
 web/index.html           the planner UI (ported from the Claude artifact); web/shim.js maps the old
                          window.claude.use() calls to this server; web/studio.js adds sign-in,
-                         status chips, AI visuals and the real Post / Schedule flow
+                         connection status, AI visuals and the real Post / Schedule flow
+web/app.css, web/app.js  app shell: styles and design tokens, step rail and one-step-at-a-time
+                         navigation (#plan #photos #polish #write #review); reads planner state only
+web/vendor/              self-hosted fonts (Hanken Grotesk for UI, Inter for slides) and JSZip; no CDN
 tests/                   vitest: unit tests and an HTTP test against a real Postgres
 ```
 
