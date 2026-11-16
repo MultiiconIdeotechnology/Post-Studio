@@ -12,6 +12,7 @@ import { pool } from "./db/index.js";
 import { registerAuth } from "./auth.js";
 import { registerAiRoutes } from "./routes/ai.js";
 import { registerImageRoutes } from "./routes/images.js";
+import { registerDesignRoutes } from "./routes/design.js";
 import { registerPlanRoutes } from "./routes/plans.js";
 import { claudeConfigured } from "./ai/claude.js";
 import { listProviders } from "./images/index.js";
@@ -48,6 +49,7 @@ export async function buildServer() {
   registerAuth(app);
   registerAiRoutes(app);
   registerImageRoutes(app);
+  registerDesignRoutes(app);
   registerPlanRoutes(app);
 
   await mkdir(config.MEDIA_DIR, { recursive: true });

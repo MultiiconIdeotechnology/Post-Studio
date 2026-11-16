@@ -33,6 +33,8 @@ function getClient(): Anthropic {
   if (!config.ANTHROPIC_API_KEY) throw new ClaudeError("not_configured", "ANTHROPIC_API_KEY is not set");
   client ??= new Anthropic({
     apiKey: config.ANTHROPIC_API_KEY,
+    // Designing a week runs many calls at once; ride out short rate limits.
+    maxRetries: 4,
     defaultHeaders: config.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": config.ANTHROPIC_WORKSPACE_ID } : undefined,
   });
   return client;

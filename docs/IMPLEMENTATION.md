@@ -71,3 +71,14 @@ Health: `GET /healthz`. Status of keys: `GET /api/status`. Logs: `docker compose
 ## Environment variables
 
 See `.env.example`. Every key is optional except the three passwords and `PUBLIC_BASE_URL`; a missing key turns that feature off and the UI says so.
+
+## Slide design by Claude (16 Nov 2026)
+
+When a post is written, the planner sends its selected option to `POST /api/design/post`. Claude first plans a look for the post (palette, type pairing, motifs, and a different technique and layout for every slide), then designs each slide as one SVG with its words, in parallel (at most four Claude calls at a time). The server:
+
+- removes anything unsafe from the SVG and swaps `photo:1` placeholders for the team's own photo;
+- rejects any word that is not in the slide's own text, and any slide that drops headline or body words (rule 2), and sends the problem back to Claude (up to three attempts);
+- renders the words alone to find their edges and rejects text that runs off the canvas or into the bottom band;
+- adds the MULTIICON wordmark and page number itself, then saves a 1080x1350 JPEG.
+
+The planner shows that image as the slide. Editing a slide's words or photo drops its design (so what is approved is what is seen). "New Generate themes" redesigns the post as a variation of the current look or a completely new one. Fonts for designs: Inter, Inter Display and IBM Plex (Serif, Sans Condensed, Mono), installed in the Docker image. Rough cost on Claude Opus 5.5: about $0.15 to $0.25 per slide, so $3 to $5 for a four-post week.

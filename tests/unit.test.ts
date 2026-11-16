@@ -108,3 +108,27 @@ describe("anthropic workspace error", async () => {
     expect(explainAnthropicError(e, "m").message).toMatch(/ANTHROPIC_WORKSPACE_ID/);
   });
 });
+
+describe("post design checks", async () => {
+  const { checkWords, checkTextBounds, svgWords } = await import("../src/design/post-design.js");
+  const svg = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350">${body}</svg>`;
+  const slide = { kicker: "AI security", headline: "Your AI tools need a check too", body: "Three things to review." };
+  it("accepts the slide's own words, in any case", () => {
+    const s = svg(`<text x="80" y="200" font-family="Inter" font-size="60"><tspan x="80" dy="0">YOUR AI TOOLS</tspan><tspan x="80" dy="70">need a check too</tspan></text><text x="80" y="400">Three things to review.</text><text x="80" y="120">AI SECURITY</text>`);
+    expect(svgWords(s)).toContain("tools");
+    expect(checkWords(s, slide, 0, 3)).toBeNull();
+  });
+  it("rejects invented words", () => {
+    const s = svg(`<text x="80" y="200">Your AI tools need a check too. 99% of firms got hacked</text><text x="80" y="400">Three things to review.</text>`);
+    expect(checkWords(s, slide, 0, 3)).toMatch(/hacked/);
+  });
+  it("rejects dropped words", () => {
+    const s = svg(`<text x="80" y="200">Your AI tools</text>`);
+    expect(checkWords(s, slide, 0, 3)).toMatch(/missing/);
+  });
+  it("finds text that runs off the canvas or into the wordmark band", async () => {
+    expect(await checkTextBounds(svg(`<text x="80" y="300" font-family="Inter" font-size="60">Fits fine</text>`))).toBeNull();
+    expect(await checkTextBounds(svg(`<text x="600" y="300" font-family="Inter" font-size="90">This line is far too long</text>`))).toMatch(/right margin/);
+    expect(await checkTextBounds(svg(`<text x="80" y="1300" font-family="Inter" font-size="60">Too low</text>`))).toMatch(/bottom band/);
+  });
+});

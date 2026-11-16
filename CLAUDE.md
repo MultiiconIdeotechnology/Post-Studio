@@ -34,6 +34,8 @@ src/ai/claude.ts         Claude service: text, JSON, images in; usage logged to 
 src/ai/brand.ts          brand facts, voice, visual direction (the server-side system prompt)
 src/images/provider.ts   ImageProvider interface; fal.ts (FLUX, Ideogram, Kling), gemini.ts, openai.ts
 src/images/compose.ts    deterministic text + wordmark overlay (sharp + SVG)
+src/design/post-design.ts Claude designs whole slides (art + the slide's own words) as SVG: plan a look
+                         per post, design slides in parallel, check words/placement, add wordmark
 src/publish/instagram.ts Graph API container → publish flow
 src/publish/scheduler.ts pg-boss queue "publish-post"; runPublish() moves post state
 src/routes/              ai.ts, images.ts, plans.ts (plans, posts, approve, schedule)

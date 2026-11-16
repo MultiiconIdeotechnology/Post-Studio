@@ -484,6 +484,7 @@ function drawCover(x, p, X, Y, w, h, r) {
 function spaced(x, px) { if ("letterSpacing" in x) x.letterSpacing = px + "px"; }
 function drawSlide(x, s, i, n) {
   const W = 1080, H = 1350, P = 84, MW = W - 2 * P;
+  if (s.design) { const im = designImg(s.design); if (im.complete && im.naturalWidth) { x.drawImage(im, 0, 0, W, H); return; } }
   const t = TPL.includes(s.template) ? s.template : "text-dark";
   const dark = t === "photo" || t === "photo-card" || t === "text-dark";
   const fg = dark ? C.white : C.navy, sub = dark ? C.subDark : C.subLight;
@@ -527,6 +528,16 @@ function drawSlide(x, s, i, n) {
   parts.forEach(([tx, col]) => { x.fillStyle = col; x.fillText(tx, fx, fy); fx += x.measureText(tx).width; });
   spaced(x, 2); x.font = `700 22px ${FONT}`; x.fillStyle = fg; x.textAlign = "right";
   x.fillText(n > 1 ? `${i + 1} / ${n}` : "@multiicon.official", W - P, fy + 2); x.textAlign = "left"; spaced(x, 0);
+}
+/* Claude-designed slides: a finished 1080x1350 image (art and words together) from the server. */
+const designImgs = new Map();
+function designImg(url) {
+  let im = designImgs.get(url);
+  if (!im) { im = new Image(); im.onload = () => redrawAll(); im.src = url; designImgs.set(url, im); }
+  return im;
+}
+function designsReady(o) {
+  return Promise.all((o ? o.slides : []).filter(s => s.design).map(s => { const im = designImg(s.design); return im.complete ? null : new Promise(r => { im.addEventListener("load", r, { once: true }); im.addEventListener("error", r, { once: true }); }); }));
 }
 function slideCanvas(s, i, n) { const c = document.createElement("canvas"); c.width = 1080; c.height = 1350; drawSlide(c.getContext("2d"), s, i, n); return c; }
 
@@ -580,7 +591,7 @@ function buildCard(p) {
         <label class="field"><span>Alt text</span><input type="text" class="alt"></label>
         <dl class="meta"><div><dt>Why it could work</dt><dd class="why"></dd></div><div><dt>Check before approving</dt><dd class="risk"></dd></div></dl>
         <div class="ask"><input type="text" class="askin" placeholder="Ask for a change, e.g. shorter and more playful" aria-label="Change request"><button class="small" data-act="rewrite">Rewrite</button></div>
-        <div class="row tools"><button class="small ghost" data-act="regen">Three new options</button><button class="small ghost" data-act="visual"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l1.7 4.3 4.3 1.7-4.3 1.7L10 14.5l-1.7-4.3L4 8.5l4.3-1.7L10 2.5Z" fill="currentColor"/></svg>Generate visual</button><span class="status pstatus"></span></div>
+        <div class="row tools"><button class="small ghost" data-act="regen">Three new options</button><button class="small ghost" data-act="visual"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l1.7 4.3 4.3 1.7-4.3 1.7L10 14.5l-1.7-4.3L4 8.5l4.3-1.7L10 2.5Z" fill="currentColor"/></svg>New Generate themes</button><span class="status pstatus"></span></div>
       </div>
     </div>
     <footer class="pfoot">
@@ -590,15 +601,17 @@ function buildCard(p) {
     <div class="panel" hidden></div>`;
   wireWhen(el, p);
   const cv = $(".pv canvas", el);
-  el.querySelectorAll(".opts button").forEach(b => b.onclick = () => { p.sel = +b.dataset.o; p.slide = 0; p.approved = false; save(); fill(el, p); });
+  el.querySelectorAll(".opts button").forEach(b => b.onclick = () => { p.sel = +b.dataset.o; p.slide = 0; p.approved = false; save(); fill(el, p); if (!opt(p).theme) requestDesign(p, "fresh"); });
   $("[data-act=prev]", el).onclick = () => { const o = opt(p); p.slide = (p.slide - 1 + o.slides.length) % o.slides.length; fillSlide(el, p); };
   $("[data-act=next]", el).onclick = () => { const o = opt(p); p.slide = (p.slide + 1) % o.slides.length; fillSlide(el, p); };
   const sv = (cls, fn) => { $(cls, el).oninput = e => { fn(e.target.value); p.approved = false; save(); drawCard(el, p); updateApproveGate(el); }; };
-  sv(".s-tpl", v => { cur(p).template = v; fillSlide(el, p); });
-  sv(".s-ph", v => { cur(p).photoId = v || null; });
-  sv(".s-kick", v => { cur(p).kicker = v; });
-  sv(".s-head", v => { cur(p).headline = v; });
-  sv(".s-body", v => { cur(p).body = v; });
+  // Editing a slide's words or photo drops its design, so what you see is always what you approve.
+  const undesign = () => { const s = cur(p); if (s.design) { delete s.design; setStatus($(".pstatus", el), "Slide changed, so it shows the plain layout. Press New Generate themes to design it again."); } };
+  sv(".s-tpl", v => { undesign(); cur(p).template = v; fillSlide(el, p); });
+  sv(".s-ph", v => { undesign(); cur(p).photoId = v || null; });
+  sv(".s-kick", v => { undesign(); cur(p).kicker = v; });
+  sv(".s-head", v => { undesign(); cur(p).headline = v; });
+  sv(".s-body", v => { undesign(); cur(p).body = v; });
   sv(".cap", v => { opt(p).caption = v; $(".cnt", el).textContent = v.length + " / 2200"; });
   sv(".tags", v => { opt(p).hashtags = v.split(/[\s,]+/).filter(Boolean); });
   sv(".alt", v => { opt(p).alt = v; });
@@ -666,6 +679,9 @@ function updateApproveGate(el) {
 
 /* ---------- generation ---------- */
 let ctl = null;
+const designAfter = [];
+// Every written post is designed straight away: Claude lays out each slide's words and art together.
+function requestDesign(p, mode) { if (p && p.kind !== "example") document.dispatchEvent(new CustomEvent("ps:design", { detail: { p, mode } })); }
 function photoList(p) { return (p.photoIds || []).map((id, i) => { const ph = photoById(id); return `${i + 1}: ${ph ? (ph.desc || ph.name) + (ph.score != null ? ` (score ${ph.score})` : "") : "photo"}`; }).join("\n"); }
 function normOption(o, p) {
   const slides = (Array.isArray(o.slides) ? o.slides : []).slice(0, 10).map(s => {
@@ -723,11 +739,13 @@ async function runPosts(list) {
       const os = (res && Array.isArray(res.options) ? res.options : Array.isArray(res) ? res : []).slice(0, 3).map(o => normOption(o, p));
       if (!os.length) throw { code: "invalid_json" };
       p.options = os; p.sel = 0; p.slide = 0; p.approved = false; p.exported = false; p.state = "ready"; delete p.keep;
+      designAfter.push(p);
     } catch (e) {
       if (p.keep) { p.options = p.keep; p.state = "ready"; delete p.keep; setStatus($("#genStatus"), errCopy(e), true); }
       else { p.state = "error"; p.error = errCopy(e); }
     }
     save(); replaceCard(p);
+    while (designAfter.length) requestDesign(designAfter.shift(), "fresh");
   }
   ctl = null; $("#stopBtn").hidden = true;
 }
@@ -786,7 +804,10 @@ ${p.kind === "event" ? `Event facts: ${JSON.stringify(S.ev)}\nPhotos (by number)
 Change it as the team asks: "${ask}"
 Keep everything the request doesn't touch. Keep [CONFIRM: ...] markers unless the request supplies the fact. Reply with only the revised option as JSON in the same shape: ${OPTION_SHAPE}`, { cache: false,
       onText: ({ text }) => setStatus(st, "Rewriting… " + text.length + " characters") });
+    const oldTheme = opt(p) && opt(p).theme;
     p.options[p.sel] = normOption(r && r.slides ? r : (r.options || [])[0] || {}, p);
+    if (oldTheme) p.options[p.sel].theme = oldTheme;
+    requestDesign(p, "variation");
     p.approved = false; p.exported = false; save(); fill(el, p); $(".askin", el).value = ""; setStatus(st, "Rewritten. Approve again when you're happy.");
   } catch (e) { setStatus(st, errCopy(e), true); }
   b.disabled = false;
@@ -798,6 +819,7 @@ const slug = s => String(s || "post").toLowerCase().replace(/[^a-z0-9]+/g, "-").
 async function addPostToZip(zip, p, folder) {
   await fontsReady;
   const o = opt(p), f = folder ? zip.folder(folder) : zip;
+  await designsReady(o);
   for (let i = 0; i < o.slides.length; i++) {
     const blob = await new Promise(r => slideCanvas(o.slides[i], i, o.slides.length).toBlob(r, "image/jpeg", .92));
     f.file(`${String(i + 1).padStart(2, "0")}.jpg`, blob);
@@ -845,7 +867,7 @@ function renderSched() {
 }
 
 /* ---------- hooks for studio.js (server features) ---------- */
-window.PS = { get S() { return S; }, photos, photoById, fmtDay, addDays, renderPhotos, renderEdits, redrawAll, opt, cur, slideCanvas, save, fill, fillSlide, replaceCard, updateApproveGate, renderSched, fullCaption, slug, setStatus, errCopy, fontsReady, esc, uid, EDIT0, PHOTO_TPL, get sample() { return sample; } };
+window.PS = { get S() { return S; }, photos, photoById, processed, designsReady, requestDesign, fmtDay, addDays, renderPhotos, renderEdits, redrawAll, opt, cur, slideCanvas, save, fill, fillSlide, replaceCard, updateApproveGate, renderSched, fullCaption, slug, setStatus, errCopy, fontsReady, esc, uid, EDIT0, PHOTO_TPL, get sample() { return sample; } };
 document.dispatchEvent(new CustomEvent("ps:ready"));
 
 /* ---------- buttons + boot ---------- */

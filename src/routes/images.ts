@@ -1,4 +1,5 @@
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
+import { keepAlive } from "./keepalive.js";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
 import { getProvider, listProviders } from "../images/index.js";
@@ -39,26 +40,6 @@ const ComposeBody = z.object({
     pageLabel: z.string().max(20).optional(),
   }),
 });
-
-// Image models can take longer than Cloudflare's 100-second limit for a response to start.
-// So long jobs answer 200 at once, send a space every 10 seconds (leading whitespace is valid
-// JSON), then the result. Failures arrive as {"error": ...} in the same 200 body.
-async function keepAlive(reply: FastifyReply, work: () => Promise<unknown>) {
-  reply.hijack();
-  const res = reply.raw;
-  res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
-  res.write(" ");
-  const timer = setInterval(() => res.write(" "), 10_000);
-  let out: unknown;
-  try {
-    out = await work();
-  } catch (e) {
-    out = { error: "generation_failed", message: (e as Error).message };
-  } finally {
-    clearInterval(timer);
-  }
-  res.end(JSON.stringify(out));
-}
 
 export function registerImageRoutes(app: FastifyInstance) {
   app.get("/api/images/providers", async (req, reply) => {

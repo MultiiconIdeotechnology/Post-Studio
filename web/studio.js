@@ -78,71 +78,84 @@
 
   /* ---------- helpers ---------- */
   const blob = (canvas, q = 0.92) => new Promise((r) => canvas.toBlob(r, "image/jpeg", q));
-  function addRemotePhoto(asset, p, desc) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const ph = { id: asset.id, name: asset.id, img, url: asset.url, score: null, desc: desc || asset.prompt || "AI visual", reason: "Generated", issues: "", pick: true, focal: { x: 0.5, y: 0.45 }, edit: { ...window.PS.EDIT0, auto: false, contrast: 0, sat: 0, sharp: 0 }, remote: true };
-        window.PS.photos.push(ph);
-        if (p && !(p.photoIds || []).includes(ph.id)) p.photoIds = [...(p.photoIds || []), ph.id];
-        resolve(ph);
-      };
-      img.onerror = () => resolve(null);
-      img.src = asset.url;
-    });
-  }
 
-  /* ---------- AI visual for a post ---------- */
-  async function generateVisual({ el, p }) {
-    const PS = window.PS;
-    const st = $(".pstatus", el);
-    const box = $(".visuals", el);
-    const configured = status && status.images.some((x) => x.configured);
-    if (!configured) return PS.setStatus(st, "No image provider key on the server yet (FAL_KEY, GEMINI_API_KEY or OPENAI_API_KEY).", true);
-    if (!PS.sample) return PS.setStatus(st, "Claude is not configured on the server.", true);
-    const o = PS.opt(p);
-    const provider = status.images.find((x) => x.default && x.configured) || status.images.find((x) => x.configured);
-    PS.setStatus(st, "Writing the image brief…");
-    try {
-      const brief = await PS.sample.json(
-        `Write ONE image-generation prompt for slide 1 of this Instagram post. Follow the VISUAL DIRECTION. The headline "${(o.slides[0] && o.slides[0].headline) || o.hook}" will be composited later, so leave clean space for it at the bottom third. No text, letters or logos in the image.
-Post topic: ${p.topic}. Hook: ${o.hook}. Caption summary: ${(o.caption || "").slice(0, 400)}
-Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subject, composition, lens, light, palette, mood","negative":"what to avoid"}`,
-        { modelTier: "default" },
-      );
-      PS.setStatus(st, `Generating with ${provider.label.split(" (")[0]}… this can take up to two minutes`);
-      const { assets } = await api("POST", "/api/images/generate", { planId, provider: provider.id, prompt: String(brief.prompt || ""), aspect: "4:5", n: 2 });
-      box.hidden = false;
-      let firstImg = null;
-      for (const a of assets) {
-        const img = document.createElement("img");
-        firstImg ??= img;
-        img.src = a.url;
-        img.alt = "AI visual option";
-        img.title = "Use as the photo on this slide";
-        img.onclick = async () => {
-          box.querySelectorAll("img").forEach((i) => i.classList.toggle("sel", i === img));
-          const ph = PS.photoById(a.id) || (await addRemotePhoto(a, p, p.topic));
-          if (!ph) return;
-          const s = PS.cur(p);
-          if (!PS.PHOTO_TPL.has(s.template)) s.template = "photo";
-          s.photoId = ph.id;
-          p.approved = false;
-          PS.save();
-          PS.renderEdits();
-          PS.fillSlide(el, p);
-          PS.updateApproveGate(el);
-          PS.setStatus(st, "Visual placed on this slide. Adjust light and crop in step 3.");
-        };
-        box.appendChild(img);
-      }
-      // Place the first option straight away so the slide is never left as plain text.
-      if (firstImg) await firstImg.onclick();
-      PS.setStatus(st, `${assets.length} visuals ready. The first is on the slide; click another to swap it.`);
-    } catch (e) {
-      PS.setStatus(st, e.message || PS.errCopy(e), true);
+  /* ---------- Claude designs every slide of a post ---------- */
+  // The planner fires "ps:design" when a post is written or rewritten. Each slide comes back as
+  // one finished image (art and words together). Two posts at a time; the server pools its calls.
+  const designQueue = [];
+  let designing = 0;
+  const photoAssets = new Map(); // planner photo id + edit settings -> uploaded asset id
+  const cardOf = (p) => document.querySelector(`.post[data-id="${p.id}"]`);
+  const textSig = (o) => JSON.stringify(o.slides.map((s) => [s.kicker, s.headline, s.body, s.template, s.photoId]));
+
+  function requestDesign({ p, mode }) {
+    const o = window.PS.opt(p);
+    if (!o || !status || !status.claude || !status.claude.configured) return;
+    if (designQueue.some((j) => j.o === o)) return;
+    designQueue.push({ p, o, mode: mode || "fresh" });
+    const el = cardOf(p);
+    if (el) window.PS.setStatus($(".pstatus", el), "Waiting to design the slides…");
+    pump();
+  }
+  function pump() {
+    while (designing < 2 && designQueue.length) {
+      const job = designQueue.shift();
+      designing++;
+      designPost(job).finally(() => { designing--; pump(); });
     }
+  }
+  async function uploadPhoto(id) {
+    const PS = window.PS;
+    const ph = PS.photoById(id);
+    if (!ph || !ph.img) return null;
+    if (ph.remote) return id; // already on the server
+    const key = id + JSON.stringify(ph.edit || {});
+    if (photoAssets.has(key)) return photoAssets.get(key);
+    const form = new FormData();
+    form.append("files", await blob(PS.processed(ph), 0.9), `${id}.jpg`);
+    const { assets } = await api("POST", `/api/images/upload?planId=${planId}&kind=upload`, form, true);
+    photoAssets.set(key, assets[0].id);
+    return assets[0].id;
+  }
+  async function designPost({ p, o, mode }) {
+    const PS = window.PS;
+    const n = o.slides.length;
+    const started = Date.now();
+    const st = () => { const el = cardOf(p); return el && $(".pstatus", el); };
+    const tick = () => { const s = st(); if (s) PS.setStatus(s, `Designing ${n} slide${n > 1 ? "s" : ""} with Claude… ${Math.round((Date.now() - started) / 1000)}s (usually one to three minutes)`); };
+    tick();
+    const timer = setInterval(tick, 1000);
+    const sig = textSig(o);
+    try {
+      if (!planId) await savePlan();
+      const slides = [];
+      for (const s of o.slides) {
+        slides.push({ kicker: s.kicker || "", headline: s.headline || "", body: s.body || "", template: s.template, photoAssetId: s.photoId && PS.PHOTO_TPL.has(s.template) ? (await uploadPhoto(s.photoId)) || undefined : undefined });
+      }
+      const r = await api("POST", "/api/design/post", { planId, mode: o.theme ? mode : "fresh", theme: o.theme || undefined, topic: p.topic || "", hook: o.hook || "", caption: o.caption || "", slides });
+      clearInterval(timer);
+      if (textSig(o) !== sig) { const s = st(); if (s) PS.setStatus(s, "The slides changed while they were being designed. Press New Generate themes to design them again."); return; }
+      o.theme = r.theme;
+      let ok = 0;
+      r.slides.forEach((a, i) => { if (a && a.url && o.slides[i]) { o.slides[i].design = a.url; ok++; } });
+      p.approved = false;
+      PS.save();
+      const el = cardOf(p);
+      if (el) { PS.fill(el, p); PS.setStatus($(".pstatus", el), ok === n ? `Designed: "${r.theme.name}". Press New Generate themes for another look.` : `${ok} of ${n} slides designed ("${r.theme.name}"). The rest keep the plain layout; press New Generate themes to try again.`, ok < n); }
+    } catch (e) {
+      clearInterval(timer);
+      const s = st();
+      if (s) PS.setStatus(s, "Design failed: " + (e.message || PS.errCopy(e)), true);
+    }
+  }
+  // "New Generate themes": a variation of the current look, or a completely new one.
+  function chooseTheme({ el, p }) {
+    const PS = window.PS;
+    const box = $(".visuals", el);
+    if (!PS.opt(p).theme) return requestDesign({ p, mode: "fresh" });
+    box.hidden = false;
+    box.innerHTML = `<div class="row"><span class="hint">New look for this post:</span><button class="small" data-m="variation">Variation of this look</button><button class="small ghost" data-m="fresh">Completely new look</button></div>`;
+    box.querySelectorAll("button").forEach((b) => (b.onclick = () => { box.hidden = true; box.innerHTML = ""; requestDesign({ p, mode: b.dataset.m }); }));
   }
 
   /* ---------- Post / Schedule against the server ---------- */
@@ -157,6 +170,7 @@ Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subj
       if (!planId) await savePlan();
       const o = PS.opt(p);
       await PS.fontsReady;
+      await PS.designsReady(o);
       // 1. render slides in the browser and upload them
       const form = new FormData();
       for (let i = 0; i < o.slides.length; i++) form.append("files", await blob(PS.slideCanvas(o.slides[i], i, o.slides.length)), `${i + 1}.jpg`);
@@ -208,7 +222,8 @@ Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subj
   }
 
   window.PSStudio = { post: postOrSchedule };
-  document.addEventListener("ps:visual", (e) => generateVisual(e.detail));
+  document.addEventListener("ps:visual", (e) => chooseTheme(e.detail));
+  document.addEventListener("ps:design", (e) => requestDesign(e.detail));
 
   (async () => {
     await ensureSignedIn();

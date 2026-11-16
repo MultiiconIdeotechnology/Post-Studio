@@ -17,7 +17,9 @@ Technical rules: one <svg> element with xmlns, the exact width, height and viewB
 Reply with the SVG only, no explanation.`;
 
 // Strip anything that could reach outside the document or run code before rasterising.
-export function sanitizeSvg(raw: string): string {
+// allowPhotos keeps <image href="photo:N"> placeholders, which the server swaps for the
+// user's own photo after sanitising. Every other <image> is removed.
+export function sanitizeSvg(raw: string, opts: { allowPhotos?: boolean; allowText?: boolean } = {}): string {
   const start = raw.indexOf("<svg");
   const end = raw.lastIndexOf("</svg>");
   if (start < 0 || end < 0) throw new Error("Claude did not return an SVG design");
@@ -25,14 +27,14 @@ export function sanitizeSvg(raw: string): string {
   svg = svg
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "")
-    .replace(/<image\b[^>]*\/?>(?:<\/image>)?/gi, "")
-    .replace(/<text\b[\s\S]*?<\/text>/gi, "")
+    .replace(/<image\b[^>]*\/?>(?:<\/image>)?/gi, (m) => (opts.allowPhotos && /\bhref\s*=\s*["']photo:\d+["']/i.test(m) ? m : ""))
+    .replace(/<text\b[\s\S]*?<\/text>/gi, (m) => (opts.allowText ? m : ""))
     .replace(/@import[^;]*;/gi, "")
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi, "")
     .replace(/<!ENTITY[^>]*>/gi, "")
     .replace(/<!DOCTYPE[^>]*>/gi, "")
     // Only same-document references (#id) are allowed in href / url().
-    .replace(/\s(?:xlink:)?href\s*=\s*("(?!#)[^"]*"|'(?!#)[^']*')/gi, "")
+    .replace(/\s(?:xlink:)?href\s*=\s*("(?!#|photo:\d+")[^"]*"|'(?!#|photo:\d+')[^']*')/gi, "")
     .replace(/url\(\s*['"]?(?!#)[^)]*\)/gi, "none");
   return svg;
 }
