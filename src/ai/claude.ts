@@ -14,6 +14,8 @@ export interface SampleInput {
   tier?: Tier;
   task?: string;
   maxTokens?: number;
+  // Overrides the tier's effort (quick = low, otherwise high).
+  effort?: "low" | "medium" | "high";
 }
 
 export class ClaudeError extends Error {
@@ -73,7 +75,7 @@ export async function sampleText(input: SampleInput): Promise<string> {
       max_tokens: input.maxTokens ?? config.CLAUDE_MAX_TOKENS,
       system: input.system,
       // Opus 5.5 defaults to medium effort; the creative work here deserves high.
-      output_config: { effort: input.tier === "quick" ? "low" : "high" },
+      output_config: { effort: input.effort ?? (input.tier === "quick" ? "low" : "high") },
       messages: [{ role: "user", content }],
     });
     await logCall(input.task ?? "sample", model, started, res.usage);

@@ -66,3 +66,22 @@ describe("higgsfield errors", async () => {
     expect(explainHiggsfieldError(402, "").message).toMatch(/Top up/);
   });
 });
+
+describe("claude design svg", async () => {
+  const { sanitizeSvg, renderSvg } = await import("../src/images/claude-design.js");
+  it("removes scripts, text, external links and images", () => {
+    const out = sanitizeSvg(`Here you go:\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" onload="x()"><script>x()</script><image href="file:///etc/passwd"/><text>Hi</text><use href="#a"/><rect fill="url(https://evil/x)"/><rect fill="url(#g)"/></svg> done`);
+    expect(out.startsWith("<svg")).toBe(true);
+    expect(out).not.toMatch(/script|onload|<image|<text|evil|passwd/);
+    expect(out).toContain('href="#a"');
+    expect(out).toContain("url(#g)");
+  });
+  it("rejects a reply with no svg", () => {
+    expect(() => sanitizeSvg("sorry")).toThrow();
+  });
+  it("renders to the requested size", async () => {
+    const png = await renderSvg('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="125"><rect width="100" height="125" fill="#121a33"/></svg>', 1080, 1350);
+    const m = await sharp(png).metadata();
+    expect([m.width, m.height]).toEqual([1080, 1350]);
+  });
+});
