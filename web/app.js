@@ -113,6 +113,26 @@
     go(S && S.posts && S.posts.length ? "s5" : S && S.agreed ? "s2" : "s1");
   }
 
+  // theme: dark by default, light as a remembered choice
+  const themeBtn = $("#themeT");
+  function paintTheme() {
+    const light = document.documentElement.dataset.theme === "light";
+    themeBtn.textContent = light ? "Dark mode" : "Light mode";
+    themeBtn.setAttribute("aria-pressed", String(light));
+    const m = $('meta[name="theme-color"]');
+    if (m) m.content = light ? "#e9ecf4" : "#070b18";
+  }
+  if (themeBtn) {
+    themeBtn.onclick = () => {
+      const light = document.documentElement.dataset.theme !== "light";
+      if (light) document.documentElement.dataset.theme = "light";
+      else delete document.documentElement.dataset.theme;
+      try { localStorage.setItem("ps-theme", light ? "light" : "dark"); } catch {}
+      paintTheme();
+    };
+    paintTheme();
+  }
+
   window.PSNav = { go, sync };
   window.addEventListener("hashchange", fromHash);
   document.addEventListener("ps:change", sync);
