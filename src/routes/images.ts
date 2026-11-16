@@ -82,7 +82,7 @@ export function registerImageRoutes(app: FastifyInstance) {
       await audit("user", "image.generated", "plan", body.planId, { provider: provider.id, n: assets.length });
       return { assets: assets.map(publicAsset) };
     } catch (e) {
-      return reply.code(502).send({ error: "generation_failed", message: (e as Error).message });
+      return reply.code(424).send({ error: "generation_failed", message: (e as Error).message });
     }
   });
 
@@ -106,7 +106,7 @@ export function registerImageRoutes(app: FastifyInstance) {
       }
       return { assets: assets.map(publicAsset) };
     } catch (e) {
-      return reply.code(502).send({ error: "edit_failed", message: (e as Error).message });
+      return reply.code(424).send({ error: "edit_failed", message: (e as Error).message });
     }
   });
 

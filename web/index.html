@@ -224,6 +224,7 @@ function errCopy(e) {
   if (c === "invalid_json") return "Claude's reply came back in the wrong shape. Try again.";
   if (c === "cancelled") return "Stopped.";
   if (c === "images_unavailable") return "Claude can't look at photos right now. Tap photos to pick them yourself.";
+  if (e && e.message) return "Claude couldn't answer. " + e.message;
   return "Claude couldn't answer" + (c ? " (" + c + ")" : "") + ". Try again.";
 }
 function setStatus(el, text, err) { el.textContent = text || ""; el.classList.toggle("err", !!err); }

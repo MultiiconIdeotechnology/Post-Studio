@@ -16,7 +16,8 @@ const Body = z.object({
 });
 
 function errorReply(e: unknown) {
-  if (e instanceof ClaudeError) return { status: e.code === "rate_limited" ? 429 : e.code === "not_configured" ? 503 : 502, body: { error: e.code, message: e.message, text: e.text } };
+  // 424, not 502: Cloudflare replaces 502 bodies with its own page, which hid the real reason.
+  if (e instanceof ClaudeError) return { status: e.code === "rate_limited" ? 429 : e.code === "not_configured" ? 503 : 424, body: { error: e.code, message: e.message, text: e.text } };
   return { status: 500, body: { error: "server_error", message: e instanceof Error ? e.message : String(e) } };
 }
 

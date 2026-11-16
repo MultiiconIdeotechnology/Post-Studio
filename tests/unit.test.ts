@@ -85,3 +85,16 @@ describe("claude design svg", async () => {
     expect([m.width, m.height]).toEqual([1080, 1350]);
   });
 });
+
+describe("anthropic errors", async () => {
+  const { explainAnthropicError } = await import("../src/ai/claude.js");
+  const apiErr = (status: number, message: string, type = "invalid_request_error") => Object.assign(new Error(message), { status, error: { error: { type, message } } });
+  it("keeps Anthropic's own reason and classifies it", () => {
+    const bill = explainAnthropicError(apiErr(400, "Your credit balance is too low to access the Anthropic API."), "m");
+    expect(bill.code).toBe("billing");
+    expect(bill.message).toMatch(/credit balance is too low/);
+    expect(explainAnthropicError(apiErr(401, "invalid x-api-key", "authentication_error"), "m").code).toBe("auth");
+    expect(explainAnthropicError(apiErr(404, "model: claude-x", "not_found_error"), "claude-x").code).toBe("model");
+    expect(explainAnthropicError(new Error("fetch failed"), "m").message).toMatch(/Could not reach/);
+  });
+});

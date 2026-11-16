@@ -20,7 +20,7 @@ export interface SampleInput {
 
 export class ClaudeError extends Error {
   constructor(
-    public code: "not_configured" | "refusal" | "rate_limited" | "invalid_json" | "api_error" | "truncated",
+    public code: "not_configured" | "refusal" | "rate_limited" | "invalid_json" | "api_error" | "truncated" | "auth" | "billing" | "model" | "overloaded",
     message: string,
     public text?: string,
   ) {
@@ -90,11 +90,28 @@ export async function sampleText(input: SampleInput): Promise<string> {
     return text;
   } catch (e) {
     if (e instanceof ClaudeError) throw e;
-    const msg = e instanceof Error ? e.message : String(e);
-    await logCall(input.task ?? "sample", model, started, null, msg);
-    if (e instanceof Anthropic.RateLimitError) throw new ClaudeError("rate_limited", msg);
-    throw new ClaudeError("api_error", msg);
+    const err = explainAnthropicError(e, model);
+    await logCall(input.task ?? "sample", model, started, null, err.message);
+    // Server log only: the reason from Anthropic, never the key.
+    console.error(`[claude] ${input.task ?? "sample"} failed: ${err.code}: ${err.message}`);
+    throw err;
   }
+}
+
+// Turn an Anthropic SDK error into one line a person can act on, keeping Anthropic's own reason.
+export function explainAnthropicError(e: unknown, model: string): ClaudeError {
+  const status = (e as { status?: number }).status;
+  const body = (e as { error?: { error?: { message?: string; type?: string } } }).error?.error;
+  const upstream = body?.message ?? (e instanceof Error ? e.message : String(e));
+  const reason = `Anthropic says: ${upstream}${status ? ` (HTTP ${status})` : ""}`;
+  if (status === 401) return new ClaudeError("auth", `The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in .env. ${reason}`);
+  if (status === 403) return new ClaudeError("auth", `This API key is not allowed to make this call. ${reason}`);
+  if (/credit balance|billing|purchase credits/i.test(upstream)) return new ClaudeError("billing", `The Anthropic account has no usable credit. Check Plans & Billing in the Claude Console. ${reason}`);
+  if (status === 404 || /model/i.test(body?.type ?? "") || /model:/i.test(upstream)) return new ClaudeError("model", `Model "${model}" is not available to this key. ${reason}`);
+  if (status === 429) return new ClaudeError("rate_limited", `Rate limit reached. Wait a minute and try again. ${reason}`);
+  if (status === 529 || /overloaded/i.test(upstream)) return new ClaudeError("overloaded", `Claude is busy right now. Try again in a minute. ${reason}`);
+  if (!status) return new ClaudeError("api_error", `Could not reach the Anthropic API from the server. ${reason}`);
+  return new ClaudeError("api_error", reason);
 }
 
 // Tolerant JSON read: whole text, else a fenced block, else first { or [ to last } or ].
