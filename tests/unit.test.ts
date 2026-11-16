@@ -58,3 +58,11 @@ describe("gemini errors", async () => {
     expect(explainGeminiError(Object.assign(new Error("API key not valid"), { status: 400 })).message).toMatch(/GEMINI_API_KEY/);
   });
 });
+
+describe("higgsfield errors", async () => {
+  const { explainHiggsfieldError } = await import("../src/images/higgsfield.js");
+  it("points to the keys on 401 and to the balance on 402", () => {
+    expect(explainHiggsfieldError(401, '{"detail":"Invalid credentials"}').message).toMatch(/HIGGSFIELD_KEY_ID/);
+    expect(explainHiggsfieldError(402, "").message).toMatch(/Top up/);
+  });
+});

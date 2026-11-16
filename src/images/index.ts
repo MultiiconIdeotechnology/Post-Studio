@@ -1,12 +1,13 @@
 import { config } from "../config.js";
 import { flux, ideogram, kling } from "./fal.js";
 import { gemini } from "./gemini.js";
+import { higgsfield } from "./higgsfield.js";
 import { openai } from "./openai.js";
 import type { ImageProvider } from "./provider.js";
 
 // Midjourney has no official API, so it is deliberately absent. Add it here if that changes.
 // Order matters: with no DEFAULT_IMAGE_PROVIDER set, the first configured one is the default.
-const providers: ImageProvider[] = [gemini, flux, openai, ideogram, kling];
+const providers: ImageProvider[] = [gemini, higgsfield, flux, openai, ideogram, kling];
 
 function defaultId(): string | undefined {
   return config.DEFAULT_IMAGE_PROVIDER || providers.find((p) => p.configured())?.id;

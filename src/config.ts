@@ -27,6 +27,10 @@ const Env = z.object({
   // Nano Banana 2. Use gemini-3-pro-image for slides with a lot of text (about 2x the price).
   GEMINI_IMAGE_MODEL: z.string().default("gemini-3.1-flash-image"),
   GEMINI_IMAGE_SIZE: z.enum(["1K", "2K"]).default("2K"),
+  // Higgsfield API (separate prepaid balance, not the website plan). Key from console.higgsfield.ai.
+  HIGGSFIELD_KEY_ID: z.string().optional(),
+  HIGGSFIELD_KEY_SECRET: z.string().optional(),
+  HIGGSFIELD_IMAGE_MODEL: z.string().default("higgsfield-ai/soul/v2/standard"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_IMAGE_MODEL: z.string().default("gpt-image-1"),
   // Empty means "the first provider that has a key".
