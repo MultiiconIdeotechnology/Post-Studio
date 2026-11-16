@@ -73,14 +73,15 @@ export async function sampleText(input: SampleInput): Promise<string> {
   }
   content.push({ type: "text", text: input.prompt });
   try {
-    const res = await anthropic.messages.create({
+    // Streaming: the SDK refuses non-streaming calls whose max_tokens could run past 10 minutes.
+    const res = await anthropic.messages.stream({
       model,
       max_tokens: input.maxTokens ?? config.CLAUDE_MAX_TOKENS,
       system: input.system,
       // Opus 5.5 defaults to medium effort; the creative work here deserves high.
       output_config: { effort: input.effort ?? (input.tier === "quick" ? "low" : "high") },
       messages: [{ role: "user", content }],
-    });
+    }).finalMessage();
     await logCall(input.task ?? "sample", model, started, res.usage);
     if (res.stop_reason === "refusal") {
       throw new ClaudeError("refusal", res.stop_details?.explanation ?? "Claude declined this request");
@@ -116,7 +117,8 @@ export function explainAnthropicError(e: unknown, model: string): ClaudeError {
   if (status === 404 || /model/i.test(body?.type ?? "") || /model:/i.test(upstream)) return new ClaudeError("model", `Model "${model}" is not available to this key. ${reason}`);
   if (status === 429) return new ClaudeError("rate_limited", `Rate limit reached. Wait a minute and try again. ${reason}`);
   if (status === 529 || /overloaded/i.test(upstream)) return new ClaudeError("overloaded", `Claude is busy right now. Try again in a minute. ${reason}`);
-  if (!status) return new ClaudeError("api_error", `Could not reach the Anthropic API from the server. ${reason}`);
+  if (e instanceof Anthropic.APIConnectionError) return new ClaudeError("api_error", `Could not reach the Anthropic API from the server. ${reason}`);
+  if (!status) return new ClaudeError("api_error", `The Claude call failed. ${reason}`);
   return new ClaudeError("api_error", reason);
 }
 

@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
 import { getProvider, listProviders } from "../images/index.js";
@@ -40,6 +40,26 @@ const ComposeBody = z.object({
   }),
 });
 
+// Image models can take longer than Cloudflare's 100-second limit for a response to start.
+// So long jobs answer 200 at once, send a space every 10 seconds (leading whitespace is valid
+// JSON), then the result. Failures arrive as {"error": ...} in the same 200 body.
+async function keepAlive(reply: FastifyReply, work: () => Promise<unknown>) {
+  reply.hijack();
+  const res = reply.raw;
+  res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
+  res.write(" ");
+  const timer = setInterval(() => res.write(" "), 10_000);
+  let out: unknown;
+  try {
+    out = await work();
+  } catch (e) {
+    out = { error: "generation_failed", message: (e as Error).message };
+  } finally {
+    clearInterval(timer);
+  }
+  res.end(JSON.stringify(out));
+}
+
 export function registerImageRoutes(app: FastifyInstance) {
   app.get("/api/images/providers", async (req, reply) => {
     if (!requireAuth(req, reply)) return;
@@ -68,22 +88,21 @@ export function registerImageRoutes(app: FastifyInstance) {
     } catch (e) {
       return reply.code(503).send({ error: "provider_unavailable", message: (e as Error).message });
     }
-    const references = [];
+    const references: Buffer[] = [];
     for (const id of body.referenceAssetIds ?? []) {
       const a = await getAsset(id);
       if (a) references.push(await readAsset(a));
     }
-    try {
-      const images = await provider.generate({ prompt: body.prompt, aspect: body.aspect, n: body.n, references });
+    const chosen = provider;
+    return keepAlive(reply, async () => {
+      const images = await chosen.generate({ prompt: body.prompt, aspect: body.aspect, n: body.n, references });
       const assets = [];
       for (const img of images) {
-        assets.push(await saveAsset({ buffer: img.buffer, mime: img.mime, kind: "generated", planId: body.planId ?? null, provider: provider.id, prompt: body.prompt, forceJpeg: true, meta: { raw: img.raw ?? null, aspect: body.aspect } }));
+        assets.push(await saveAsset({ buffer: img.buffer, mime: img.mime, kind: "generated", planId: body.planId ?? null, provider: chosen.id, prompt: body.prompt, forceJpeg: true, meta: { raw: img.raw ?? null, aspect: body.aspect } }));
       }
-      await audit("user", "image.generated", "plan", body.planId, { provider: provider.id, n: assets.length });
+      await audit("user", "image.generated", "plan", body.planId, { provider: chosen.id, n: assets.length });
       return { assets: assets.map(publicAsset) };
-    } catch (e) {
-      return reply.code(424).send({ error: "generation_failed", message: (e as Error).message });
-    }
+    });
   });
 
   app.post("/api/images/edit", async (req, reply) => {

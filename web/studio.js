@@ -6,7 +6,8 @@
   const api = async (method, path, body, isForm) => {
     const res = await fetch(path, { method, headers: isForm ? undefined : { "content-type": "application/json" }, body: isForm ? body : body ? JSON.stringify(body) : undefined });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw Object.assign(new Error(json.message || res.statusText), { code: json.error, status: res.status });
+    // Long image jobs answer 200 and report a failure inside the body.
+    if (!res.ok || json.error) throw Object.assign(new Error(json.message || res.statusText), { code: json.error, status: res.status });
     return json;
   };
 
@@ -110,11 +111,13 @@ Post topic: ${p.topic}. Hook: ${o.hook}. Caption summary: ${(o.caption || "").sl
 Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subject, composition, lens, light, palette, mood","negative":"what to avoid"}`,
         { modelTier: "default" },
       );
-      PS.setStatus(st, `Generating with ${provider.label.split(" (")[0]}… this can take 20 to 60 seconds`);
+      PS.setStatus(st, `Generating with ${provider.label.split(" (")[0]}… this can take up to two minutes`);
       const { assets } = await api("POST", "/api/images/generate", { planId, provider: provider.id, prompt: String(brief.prompt || ""), aspect: "4:5", n: 2 });
       box.hidden = false;
+      let firstImg = null;
       for (const a of assets) {
         const img = document.createElement("img");
+        firstImg ??= img;
         img.src = a.url;
         img.alt = "AI visual option";
         img.title = "Use as the photo on this slide";
@@ -134,7 +137,9 @@ Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subj
         };
         box.appendChild(img);
       }
-      PS.setStatus(st, `${assets.length} visuals ready. Click one to use it on the current slide.`);
+      // Place the first option straight away so the slide is never left as plain text.
+      if (firstImg) await firstImg.onclick();
+      PS.setStatus(st, `${assets.length} visuals ready. The first is on the slide; click another to swap it.`);
     } catch (e) {
       PS.setStatus(st, e.message || PS.errCopy(e), true);
     }

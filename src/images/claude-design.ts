@@ -13,7 +13,7 @@ const DESIGN_SYSTEM = `You are the in-house graphic designer for Multiicon, an I
 Style: a confident international tech brand. Editorial, modern and calm. Think premium product-launch graphics: layered gradients, soft glows, geometric or isometric shapes, clean flat or 2.5D illustration, subtle grain or grid textures, depth from overlapping translucent layers. One strong focal point and one idea per frame.
 Palette: ${PALETTE}. Rich contrast; never washed out or pale.
 Never: text, letters, numbers, logos or watermarks (they are added later); clip-art, emoji, stock clichés (handshakes, glowing brains, binary rain, padlocks on circuit boards); photographic people or faces.
-Technical rules: one <svg> element with xmlns, the exact width, height and viewBox given; only inline SVG (paths, shapes, gradients, filters such as feGaussianBlur and feTurbulence, patterns, masks, clipPaths); no <image>, <text>, <foreignObject>, <script>, CSS @import or external links; ids unique. Keep it under 40 KB.
+Technical rules: one <svg> element with xmlns, the exact width, height and viewBox given; only inline SVG (paths, shapes, gradients, filters such as feGaussianBlur and feTurbulence, patterns, masks, clipPaths); no <image>, <text>, <foreignObject>, <script>, CSS @import or external links; ids unique. Keep it under 20 KB: favour a few well-chosen shapes and gradients over many small ones.
 Reply with the SVG only, no explanation.`;
 
 // Strip anything that could reach outside the document or run code before rasterising.
@@ -60,7 +60,7 @@ ${variant}
 
 BRIEF:
 ${req.prompt}`;
-  const text = await sampleText({ system: DESIGN_SYSTEM, prompt, task: "image.claude_design", effort: "medium", maxTokens: 24000 });
+  const text = await sampleText({ system: DESIGN_SYSTEM, prompt, task: "image.claude_design", effort: "medium", maxTokens: 16000 });
   const svg = sanitizeSvg(text);
   const buffer = await renderSvg(svg, width, height);
   return { buffer, mime: "image/png", raw: { model: "claude-svg", variant, svgBytes: svg.length } };
