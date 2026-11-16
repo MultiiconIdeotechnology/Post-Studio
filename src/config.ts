@@ -24,10 +24,13 @@ const Env = z.object({
   FAL_IDEOGRAM_MODEL: z.string().default("fal-ai/ideogram/v3"),
   FAL_KLING_IMAGE_MODEL: z.string().default("fal-ai/kling-image/v2"),
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_IMAGE_MODEL: z.string().default("gemini-2.5-flash-image"),
+  // Nano Banana 2. Use gemini-3-pro-image for slides with a lot of text (about 2x the price).
+  GEMINI_IMAGE_MODEL: z.string().default("gemini-3.1-flash-image"),
+  GEMINI_IMAGE_SIZE: z.enum(["1K", "2K"]).default("2K"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_IMAGE_MODEL: z.string().default("gpt-image-1"),
-  DEFAULT_IMAGE_PROVIDER: z.string().default("flux"),
+  // Empty means "the first provider that has a key".
+  DEFAULT_IMAGE_PROVIDER: z.string().optional(),
 
   IG_USER_ID: z.string().optional(),
   IG_ACCESS_TOKEN: z.string().optional(),

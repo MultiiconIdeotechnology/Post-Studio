@@ -47,3 +47,14 @@ describe("compose", () => {
     expect(meta.height).toBe(1350);
   });
 });
+
+describe("gemini errors", async () => {
+  const { explainGeminiError } = await import("../src/images/gemini.js");
+  it("explains a free-tier quota of zero as a billing problem", () => {
+    const e = Object.assign(new Error("Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0"), { status: 429 });
+    expect(explainGeminiError(e).message).toMatch(/billing/);
+  });
+  it("explains a bad key", () => {
+    expect(explainGeminiError(Object.assign(new Error("API key not valid"), { status: 400 })).message).toMatch(/GEMINI_API_KEY/);
+  });
+});
