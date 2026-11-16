@@ -197,12 +197,63 @@ export function footerSvg(mark: "light" | "dark", label: string): string {
 
 /* ---------------- pipeline ---------------- */
 
+const THEME_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["name", "mood", "palette", "type", "motifs", "slides"],
+  properties: {
+    name: { type: "string" },
+    mood: { type: "string" },
+    palette: {
+      type: "object",
+      additionalProperties: false,
+      required: ["background", "ink", "accent", "support"],
+      properties: { background: { type: "array", items: { type: "string" } }, ink: { type: "string" }, accent: { type: "string" }, support: { type: "array", items: { type: "string" } } },
+    },
+    type: { type: "object", additionalProperties: false, required: ["display", "text"], properties: { display: { type: "string" }, text: { type: "string" } } },
+    motifs: { type: "array", items: { type: "string" } },
+    slides: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["concept", "technique", "layout", "mark"],
+        properties: { concept: { type: "string" }, technique: { type: "string" }, layout: { type: "string" }, mark: { type: "string", enum: ["light", "dark"] } },
+      },
+    },
+  },
+};
+
+// Used only if planning fails twice, so the slides still get designed.
+function fallbackTheme(n: number): Theme {
+  const techniques = ["bold typographic poster with layered gradient mesh and soft blur", "glass card over glowing shapes with a simple diagram", "split-colour block layout with line art", "isometric 2.5D object built from shaded polygons", "oversized number with grid and dot pattern", "editorial layout with grain texture and cut-out shapes", "duotone frame and thin rules", "data graphic with clean bars and labels"];
+  return {
+    name: "Multiicon night and saffron",
+    mood: "confident, calm, modern",
+    palette: { background: ["#121a33", "#0b1022"], ink: "#ffffff", accent: "#f2a33a", support: ["#f4f0e8", "#2bd4c0"] },
+    type: { display: "Inter Display 800", text: "Inter 400" },
+    motifs: ["fine grid", "saffron dot"],
+    slides: Array.from({ length: n }, (_, i) => ({ concept: "show the slide's idea simply", technique: techniques[i % techniques.length], layout: "words on the left, art on the right or above", mark: i % 3 === 1 ? "dark" : "light" })),
+  };
+}
+
 export async function planTheme(post: PostInput): Promise<Theme> {
   const images = post.slides.filter((s) => s.photo).slice(0, 4).map((s) => ({ data: s.photo!, mime: "image/jpeg" as const }));
-  const text = await sampleText({ system: DESIGNER, prompt: themePrompt(post), images, task: "design.theme", effort: "medium", maxTokens: 8000 });
-  const theme = extractJson<Theme>(text);
-  if (!theme || !Array.isArray(theme.slides) || !theme.slides.length) throw new Error("Claude did not return a design plan");
-  return theme;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const text = await sampleText({ system: DESIGNER, prompt: themePrompt(post), images, task: "design.theme", effort: "medium", maxTokens: 32000, schema: THEME_SCHEMA });
+      const theme = extractJson<Theme>(text);
+      if (theme && Array.isArray(theme.slides) && theme.slides.length) {
+        // Pad or trim so every slide has a plan.
+        while (theme.slides.length < post.slides.length) theme.slides.push(fallbackTheme(post.slides.length).slides[theme.slides.length]);
+        theme.slides = theme.slides.slice(0, post.slides.length);
+        return theme;
+      }
+    } catch (e) {
+      console.error(`[design] theme attempt ${attempt} failed: ${(e as Error).message}`);
+    }
+  }
+  return fallbackTheme(post.slides.length);
 }
 
 async function photoDataUri(photo: Buffer): Promise<string> {
@@ -242,7 +293,16 @@ export async function designSlide(post: PostInput, theme: Theme, i: number): Pro
   const images = s.photo ? [{ data: await sharp(s.photo).resize(768, 768, { fit: "inside" }).jpeg().toBuffer(), mime: "image/jpeg" as const }] : [];
   let feedback: string | undefined;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const text = await sampleText({ system: `${DESIGNER}\n\n${BRAND_FACTS}`, prompt: slidePrompt(post, theme, i, feedback), images, task: "design.slide", effort: "medium", maxTokens: 20000 });
+    let text: string;
+    try {
+      text = await sampleText({ system: `${DESIGNER}\n\n${BRAND_FACTS}`, prompt: slidePrompt(post, theme, i, feedback), images, task: "design.slide", effort: "medium", maxTokens: 32000 });
+    } catch (e) {
+      // A cut-off or failed reply gets another go; rate limits are already retried by the SDK.
+      feedback = (e as { code?: string }).code === "truncated" ? "the reply was cut off before </svg>: use fewer, simpler shapes and stay under 20 KB" : undefined;
+      console.error(`[design] slide ${i + 1} attempt ${attempt} failed: ${(e as Error).message}`);
+      if (attempt === 3) throw e;
+      continue;
+    }
     const r = await finishSlide(text, s, i, total);
     if ("image" in r) return r.image;
     feedback = r.problem;

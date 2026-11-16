@@ -16,6 +16,8 @@ export interface SampleInput {
   maxTokens?: number;
   // Overrides the tier's effort (quick = low, otherwise high).
   effort?: "low" | "medium" | "high";
+  // Structured output: the reply is guaranteed to be JSON matching this schema.
+  schema?: Record<string, unknown>;
 }
 
 export class ClaudeError extends Error {
@@ -81,7 +83,7 @@ export async function sampleText(input: SampleInput): Promise<string> {
       max_tokens: input.maxTokens ?? config.CLAUDE_MAX_TOKENS,
       system: input.system,
       // Opus 5.5 defaults to medium effort; the creative work here deserves high.
-      output_config: { effort: input.effort ?? (input.tier === "quick" ? "low" : "high") },
+      output_config: { effort: input.effort ?? (input.tier === "quick" ? "low" : "high"), ...(input.schema ? { format: { type: "json_schema" as const, schema: input.schema } } : {}) },
       messages: [{ role: "user", content }],
     }).finalMessage();
     await logCall(input.task ?? "sample", model, started, res.usage);
