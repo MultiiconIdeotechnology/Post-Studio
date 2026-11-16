@@ -17,8 +17,9 @@
     await new Promise((resolve) => {
       const box = document.createElement("div");
       box.className = "login";
-      box.innerHTML = `<form><h2 style="margin:0">Post Studio</h2><label class="field"><span>Team password</span><input type="password" id="pw" autocomplete="current-password" required></label><button class="primary" type="submit">Sign in</button><span class="status err" id="pwErr"></span></form>`;
+      box.innerHTML = `<form><span class="wm" aria-label="Multiicon">MULTI<i>I</i>CON</span><div><h1>Post Studio</h1><p class="hint">Sign in with the team password to plan and approve this week's posts.</p></div><label class="field"><span>Team password</span><input type="password" id="pw" autocomplete="current-password" required autofocus></label><button class="go lg" type="submit">Sign in</button><span class="status err" id="pwErr" role="alert"></span></form>`;
       document.body.appendChild(box);
+      $("#pw", box).focus();
       $("form", box).onsubmit = async (e) => {
         e.preventDefault();
         try {
@@ -38,12 +39,13 @@
     status = await api("GET", "/api/status").catch(() => null);
     const el = $("#studioStatus");
     if (!status || !el) return;
-    const chip = (ok, text) => `<span class="chip ${ok ? "ok" : "warn"}">${text}</span>`;
+    const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const row = (ok, name, detail) => `<div class="conn-row ${ok ? "ok" : "warn"}" title="${esc(name + ": " + detail)}"><span class="dot" aria-hidden="true"></span><span class="conn-n">${esc(name)}</span><span class="conn-d">${esc(detail)}</span></div>`;
     const imgs = status.images.filter((p) => p.configured).map((p) => p.label.split(" (")[0]);
     el.innerHTML =
-      chip(status.claude.configured, status.claude.configured ? `Claude: ${status.claude.model}` : "Claude: no API key") +
-      chip(imgs.length > 0, imgs.length ? `Images: ${imgs.join(", ")}` : "Images: no provider key") +
-      chip(status.instagram.publishEnabled, status.instagram.publishEnabled ? "Instagram: connected" : status.instagram.configured ? "Instagram: connected, publishing off" : "Instagram: not connected");
+      row(status.claude.configured, "Claude", status.claude.configured ? status.claude.model : "No API key") +
+      row(imgs.length > 0, "Images", imgs.length ? imgs.join(", ") : "No provider key") +
+      row(status.instagram.publishEnabled, "Instagram", status.instagram.publishEnabled ? "Connected" : status.instagram.configured ? "Publishing off" : "Not connected");
   }
 
   /* ---------- plan persistence (server copy of the planner state) ---------- */
@@ -143,7 +145,8 @@ Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subj
     const PS = window.PS;
     const pn = $(".panel", el);
     pn.hidden = false;
-    pn.innerHTML = `<b>Preparing…</b><span class="status"></span>`;
+    pn.classList.remove("err");
+    pn.innerHTML = `<b>Preparing the slides…</b><span class="status"></span>`;
     const st = $(".status", pn);
     try {
       if (!planId) await savePlan();
@@ -168,15 +171,15 @@ Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subj
         PS.save();
         PS.updateApproveGate(el);
         PS.renderSched();
-        pn.innerHTML = `<b>Scheduled.</b> This post goes to Instagram on ${PS.esc(when.toLocaleString("en-IN"))}. Status: ${PS.esc(r.post.state)}. <button class="small" data-x="cancel">Cancel schedule</button><span class="status"></span>`;
+        pn.innerHTML = `<b>Scheduled.</b> <span>This post goes to Instagram on ${PS.esc(when.toLocaleString("en-IN"))}. Status: ${PS.esc(r.post.state)}.</span><div class="row"><button class="small ghost" data-x="cancel">Cancel schedule</button></div><span class="status"></span>`;
         $("[data-x=cancel]", pn).onclick = async () => {
           await api("POST", `/api/posts/${p.serverId}/cancel`);
           pn.innerHTML = `<b>Cancelled.</b> The post stays approved on the server; press Post / Schedule to schedule it again.`;
         };
       } catch (e) {
         if (e.code !== "instagram_not_connected") throw e;
-        pn.innerHTML = `<b>Saved and approved on the server, not posted.</b> ${PS.esc(e.message)}
-          <div class="row"><button class="small primary" data-x="zip">Download post (.zip)</button><button class="small" data-x="copy">Copy caption</button></div><span class="status"></span>
+        pn.innerHTML = `<b>Saved and approved, not posted.</b> <span>${PS.esc(e.message)}</span>
+          <div class="row"><button class="small primary" data-x="zip">Download post (.zip)</button><button class="small ghost" data-x="copy">Copy caption</button></div><span class="status"></span>
           <span class="hint">Once the Meta app and Instagram login are configured on the server, this button schedules the post for ${PS.esc(when.toLocaleString("en-IN"))}.</span>`;
         const st2 = $(".status", pn);
         $("[data-x=zip]", pn).onclick = async () => {
@@ -195,7 +198,7 @@ Reply with only JSON: {"prompt":"the full prompt, 60 to 120 words, concrete subj
         $("[data-x=copy]", pn).onclick = () => navigator.clipboard.writeText(PS.fullCaption(o)).then(() => PS.setStatus(st2, "Caption copied."), () => PS.setStatus(st2, "Copy was blocked; select the caption field and press Ctrl+C.", true));
       }
     } catch (e) {
-      pn.innerHTML = `<b>Could not post.</b> ${PS.esc(e.message)}`;
+      pn.classList.add("err"); pn.innerHTML = `<b>Could not post.</b> <span>${PS.esc(e.message)}</span>`;
     }
   }
 

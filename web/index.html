@@ -1,208 +1,152 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Multiicon Post Studio</title>
+<title>Post Studio · Multiicon</title>
+<meta name="color-scheme" content="light dark">
 <script src="/shim.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;700;800&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>
-[hidden]{display:none!important}
-html,body{margin:0}
-img{max-width:100%}
-/* Layout: one long working form; five numbered steps (a real sequence), then a grid of post cards. Brand colours from the existing @multiicon.official posts. */
-:root{
-  --paper:#f4f1ea; --surface:#fffdf8; --sunk:#ebe6db; --ink:#131a33; --muted:#585e74; --line:#ddd6c8;
-  --accent:#e58f24; --accent-ink:#8c4a00; --accent-soft:#fbe6c8;
-  --ok:#1d7448; --ok-soft:#dcefe3; --warn:#9a4b00; --warn-soft:#fdebd3; --bad:#b0271b; --bad-soft:#fbe0dc;
-  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
-  --f-body:"Public Sans", "Segoe UI", system-ui, sans-serif;
-  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#0e1322; --surface:#161c30; --sunk:#1d2440; --ink:#ecE8df; --muted:#a2a7ba; --line:#2b3354;
-  --accent:#f2a33a; --accent-ink:#f7c27c; --accent-soft:#3a2a12;
-  --ok:#5cc58d; --ok-soft:#173326; --warn:#f2a95c; --warn-soft:#3a2810; --bad:#f08a7e; --bad-soft:#3d1a17; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#0e1322; --surface:#161c30; --sunk:#1d2440; --ink:#ece8df; --muted:#a2a7ba; --line:#2b3354;
-  --accent:#f2a33a; --accent-ink:#f7c27c; --accent-soft:#3a2a12;
-  --ok:#5cc58d; --ok-soft:#173326; --warn:#f2a95c; --warn-soft:#3a2810; --bad:#f08a7e; --bad-soft:#3d1a17; color-scheme:dark}
-*{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
-.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-header.top{padding-block:28px 8px}
-.brandline{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink)}
-h1{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1.05;margin:6px 0 8px;text-wrap:balance}
-.lede{color:var(--muted);max-width:68ch;margin:0}
-.banner{margin-top:14px;padding:10px 14px;border-radius:10px;background:var(--warn-soft);color:var(--warn);font-weight:500}
-main{display:grid;gap:18px;padding-block:18px 60px}
-section.step{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;display:grid;gap:14px}
-.stephead{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
-.num{font-family:var(--f-mono);font-weight:600;color:var(--accent-ink);font-size:13px}
-h2{font-family:var(--f-display);font-weight:800;font-size:22px;margin:0;line-height:1.2}
-.hint{color:var(--muted);font-size:13.5px;margin:0;max-width:75ch}
-.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-.field{display:grid;gap:5px;min-width:0}
-.field>span{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.02em}
-input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
-textarea{resize:vertical;min-height:70px}
-input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;align-items:start}
-button{font:inherit;font-weight:600;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px}
-button:hover:not(:disabled){border-color:var(--accent)}
-button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-button.go{background:var(--accent);color:#1b1206;border-color:var(--accent)}
-button:disabled{opacity:.45;cursor:not-allowed}
-button.small{padding:5px 10px;font-size:13px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--muted)}
-.chip.ok{background:var(--ok-soft);color:var(--ok)}
-.chip.warn{background:var(--warn-soft);color:var(--warn)}
-.chip.bad{background:var(--bad-soft);color:var(--bad)}
-.chip.acc{background:var(--accent-soft);color:var(--accent-ink)}
-.out{background:var(--sunk);border-radius:10px;padding:12px 14px;font-size:14px}
-.out:empty{display:none}
-.out ul{margin:6px 0 0;padding-left:18px}
-.status{font-size:13.5px;color:var(--muted);min-height:1.2em}
-.status.err{color:var(--bad)}
-.drop{border:1.5px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted);background:var(--paper)}
-.drop.over{border-color:var(--accent);background:var(--accent-soft)}
-.drop label{color:var(--accent-ink);font-weight:600;cursor:pointer;text-decoration:underline}
-.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
-.ph{position:relative;border-radius:10px;overflow:hidden;background:var(--sunk);border:2px solid transparent;cursor:pointer;aspect-ratio:4/5}
-.ph img{width:100%;height:100%;object-fit:cover;display:block}
-.ph.pick{border-color:var(--accent)}
-.ph .score{position:absolute;top:6px;left:6px;font-family:var(--f-mono);font-size:12px;font-weight:600;background:rgba(10,14,28,.78);color:#fff;padding:2px 7px;border-radius:6px}
-.ph .tick{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(10,14,28,.55);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
-.ph.pick .tick{background:var(--accent);color:#1b1206}
-.ph .why{position:absolute;inset:auto 0 0 0;background:linear-gradient(transparent,rgba(10,14,28,.88));color:#fff;font-size:11.5px;line-height:1.3;padding:20px 8px 7px}
-.ph .rm{position:absolute;bottom:6px;right:6px;display:none}
-.edits{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
-.ed{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px;background:var(--paper)}
-.ed canvas{width:100%;border-radius:8px;cursor:crosshair;display:block;background:var(--sunk)}
-.sl{display:grid;grid-template-columns:78px 1fr 34px;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
-.sl input{width:100%;accent-color:var(--accent)}
-.sl output{font-family:var(--f-mono);font-size:11.5px;text-align:right}
-.note{font-size:13px;color:var(--muted);border-left:3px solid var(--accent);padding:4px 0 4px 10px;margin:0;max-width:80ch}
-.posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
-.post{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;align-content:start;min-width:0}
-.post.approved{border-color:var(--ok)}
-.phead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.phead .when{display:flex;gap:6px;margin-left:auto}
-.phead .when input{width:auto;padding:4px 6px;font-size:13px}
-.topic{font-family:var(--f-display);font-weight:600;font-size:17px;line-height:1.25;margin:0}
-.opts{display:flex;gap:6px;flex-wrap:wrap}
-.opts button{padding:5px 10px;font-size:13px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.opts button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.pv{position:relative;border-radius:10px;overflow:hidden;background:var(--sunk)}
-.pv canvas{width:100%;display:block;aspect-ratio:4/5}
-.pvnav{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.dots{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
-details.se{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-details.se summary{cursor:pointer;font-weight:600;font-size:13.5px}
-details.se .grid{display:grid;gap:8px;margin-top:8px}
-.meta{font-size:13px;color:var(--muted);display:grid;gap:4px}
-.meta b{color:var(--ink);font-weight:600}
-.cnt{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-align:right}
-.ask{display:flex;gap:6px}
-.ask input{flex:1}
-.approve{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;font-weight:500}
-.approve input{margin-top:3px;accent-color:var(--ok)}
-.visuals{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
-.visuals img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;border:2px solid transparent;cursor:pointer}
-.visuals img.sel{border-color:var(--accent)}
-.login{position:fixed;inset:0;background:var(--paper);display:grid;place-items:center;z-index:50;padding:16px}
-.login form{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;display:grid;gap:12px;width:min(360px,100%)}
-.panel{border-radius:10px;padding:12px;background:var(--sunk);display:grid;gap:8px;font-size:13.5px}
-.live{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);background:var(--sunk);border-radius:8px;padding:10px;max-height:150px;overflow:hidden;white-space:pre-wrap;word-break:break-word}
-.skel{aspect-ratio:4/5;border-radius:10px;background:linear-gradient(100deg,var(--sunk) 40%,var(--paper) 50%,var(--sunk) 60%) 0 0/300% 100%;animation:sh 1.4s linear infinite}
-@keyframes sh{to{background-position:-150% 0}}
-@media (prefers-reduced-motion:reduce){.skel{animation:none}}
-.weekbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-table.sched{border-collapse:collapse;width:100%;font-size:13.5px}
-table.sched td,table.sched th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-table.sched th{font-size:12px;color:var(--muted);font-weight:600}
-.tw{overflow-x:auto}
-.tab{font-variant-numeric:tabular-nums}
-@media (max-width:520px){section.step{padding:16px 14px}.posts{grid-template-columns:1fr}}
-</style>
+<!-- Fonts and JSZip are served from this container (web/vendor), so the studio needs no third-party CDN. -->
+<link rel="preload" href="/vendor/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/app.css">
+<script src="/vendor/jszip.min.js"></script>
 </head>
 <body>
-<div class="wrap">
-<header class="top">
-  <div class="brandline">@multiicon.official · Instagram</div>
-  <h1>Weekly post planner</h1>
-  <div id="studioStatus" class="row" style="gap:8px;margin-top:10px"></div>
-  <p class="lede">Agree the week, drop in last week's event photos, let Claude pick and polish the best ones, then review two or three options for every post. Nothing goes live until a person approves it.</p>
-  <div class="banner" id="noClaude" hidden>The server has no Claude API key yet (ANTHROPIC_API_KEY), so the suggest, pick and write buttons are off. Photo edits, slide edits and downloads still work.</div>
-</header>
+<div class="app">
 
-<main>
-<section class="step" id="s1">
-  <div class="stephead"><span class="num">STEP 1</span><h2>Agree how many posts</h2><span class="chip" id="agreeChip">Not agreed yet</span></div>
-  <div class="row">
-    <label class="field" style="width:170px"><span>Week starting (Monday)</span><input type="date" id="weekStart"></label>
-    <label class="field" style="width:120px"><span>Posts this week</span><input type="number" id="postCount" min="1" max="14" value="4"></label>
-    <button id="suggestBtn">Suggest a number</button>
-    <button class="primary" id="agreeBtn">Agree</button>
+<aside class="rail" aria-label="Post Studio">
+  <div class="brand">
+    <span class="wm" aria-label="Multiicon">MULTI<i>I</i>CON</span>
+    <span class="prod">Post Studio</span>
   </div>
-  <div class="out" id="suggestOut"></div>
-  <div class="status" id="suggestStatus"></div>
+  <div class="acct">
+    <span class="acct-av" aria-hidden="true">M</span>
+    <span class="acct-tx"><b>@multiicon.official</b><small>Instagram</small></span>
+  </div>
+  <nav class="steps" aria-label="Steps">
+    <a href="#plan" data-step="s1"><span class="n">1</span><span class="t">Plan the week<small data-nav="s1">Not agreed yet</small></span></a>
+    <a href="#photos" data-step="s2"><span class="n">2</span><span class="t">Event photos<small data-nav="s2">No photos yet</small></span></a>
+    <a href="#polish" data-step="s3"><span class="n">3</span><span class="t">Polish photos<small data-nav="s3">Nothing picked</small></span></a>
+    <a href="#write" data-step="s4"><span class="n">4</span><span class="t">Brief and write<small data-nav="s4">Not written yet</small></span></a>
+    <a href="#review" data-step="s5"><span class="n">5</span><span class="t">Review and post<small data-nav="s5">Nothing to review</small></span></a>
+  </nav>
+  <div class="rail-foot">
+    <span class="rail-h">Connections</span>
+    <div id="studioStatus" class="conn"></div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="tb-week"><span class="tb-k">Week of</span> <b id="tbWeek">–</b></div>
+    <div class="tb-progress" id="tbProgress" aria-live="polite"></div>
+  </header>
+
+  <div class="banner" id="noClaude" hidden role="status">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 18.5 17h-17L10 2.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 8v4M10 14.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>The server has no Claude API key yet (ANTHROPIC_API_KEY), so suggesting, picking and writing are switched off. Photo edits, slide edits and downloads still work.</span>
+  </div>
+
+<main class="content">
+
+<section class="step" id="s1" aria-labelledby="h1t">
+  <header class="stephead">
+    <div><p class="eyebrow">Step 1 of 5</p><h1 id="h1t">Plan the week</h1>
+      <p class="sub">Pick the week and agree how many posts go out. Claude can suggest a number based on the dates and your notes.</p></div>
+    <span class="chip" id="agreeChip">Not agreed yet</span>
+  </header>
+  <div class="card">
+    <div class="row">
+      <label class="field w-date"><span>Week starting (Monday)</span><input type="date" id="weekStart"></label>
+      <label class="field w-num"><span>Posts this week</span><input type="number" id="postCount" min="1" max="14" value="4"></label>
+      <button id="suggestBtn" class="ghost"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l1.7 4.3 4.3 1.7-4.3 1.7L10 14.5l-1.7-4.3L4 8.5l4.3-1.7L10 2.5Z" fill="currentColor"/></svg>Suggest a number</button>
+      <button class="primary" id="agreeBtn">Agree</button>
+    </div>
+    <div class="out" id="suggestOut"></div>
+    <div class="status" id="suggestStatus"></div>
+  </div>
 </section>
 
-<section class="step" id="s2">
-  <div class="stephead"><span class="num">STEP 2</span><h2>Last week's event</h2></div>
-  <div class="row">
-    <label class="field" style="width:280px"><span>How many of the posts come from the event?</span><select id="eventCount"></select></label>
+<section class="step" id="s2" aria-labelledby="h2t">
+  <header class="stephead">
+    <div><p class="eyebrow">Step 2 of 5</p><h1 id="h2t">Event photos</h1>
+      <p class="sub">Tell Claude what happened at last week's event and drop in the raw photos. Claude rates them and picks the strongest.</p></div>
+  </header>
+  <div class="card">
+    <label class="field w-wide"><span>How many of this week's posts come from the event?</span><select id="eventCount"></select></label>
   </div>
-  <div id="eventBlock" class="grid" style="display:grid;gap:14px">
-    <p class="hint">Claude only uses the facts you type here. Anything missing comes back as <b>[CONFIRM: …]</b> and blocks approval until you fill it.</p>
-    <div class="grid2">
+  <div id="eventBlock" class="split">
+    <div class="card stack">
+      <h2 class="card-h">Event facts</h2>
+      <p class="hint">Claude only uses what you type here. Anything missing comes back as <b>[CONFIRM: …]</b> and blocks approval until you fill it in.</p>
       <label class="field"><span>Event name</span><input type="text" id="evName" placeholder="e.g. Multiicon Partner Evening 2026"></label>
       <label class="field"><span>Date and place</span><input type="text" id="evWhen" placeholder="e.g. 24 Oct, Rajkot office"></label>
       <label class="field"><span>What happened</span><textarea id="evWhat" placeholder="Who spoke, what was launched or celebrated, one moment people liked"></textarea></label>
       <label class="field"><span>Who was there</span><textarea id="evWho" placeholder="e.g. 40 guests: partners, customers and the team"></textarea></label>
+      <label class="check consent"><input type="checkbox" id="evConsent"><span>Everyone clearly visible in these photos is okay with appearing on Instagram.</span></label>
     </div>
-    <label class="approve"><input type="checkbox" id="evConsent"> Everyone clearly visible in these photos is okay with appearing on Instagram.</label>
-    <div class="drop" id="drop">Drop up to 15 raw photos here or <label for="photoIn">choose files</label>
-      <input type="file" id="photoIn" accept="image/jpeg,image/png,image/webp" multiple hidden>
-      <div class="hint" style="margin:6px auto 0">Photos stay in this browser tab. They go to Claude only when you press Pick, and are not saved if you reload.</div>
+    <div class="card stack">
+      <h2 class="card-h">Photos <span class="count" id="photoCount"></span></h2>
+      <div class="drop" id="drop">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0-4 4m4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <div><b>Drop up to 15 photos</b> or <label for="photoIn">choose files</label></div>
+        <input type="file" id="photoIn" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        <small>JPEG, PNG or WebP. Photos stay in this tab and go to Claude only when you press Pick.</small>
+      </div>
+      <div class="photos" id="photoGrid"></div>
+      <div class="row"><button class="go" id="pickBtn" disabled>Pick the best photos</button><span class="status" id="pickStatus"></span></div>
     </div>
-    <div class="photos" id="photoGrid"></div>
-    <div class="row"><button class="go" id="pickBtn" disabled>Pick the best photos</button><span class="status" id="pickStatus"></span></div>
   </div>
 </section>
 
-<section class="step" id="s3">
-  <div class="stephead"><span class="num">STEP 3</span><h2>Polish the picked photos</h2><span class="chip" id="pickedChip">0 picked</span></div>
-  <p class="hint">Auto levels, light, colour and sharpening run right here, the same way every time. Click a photo to set the point a crop should keep in frame.</p>
+<section class="step" id="s3" aria-labelledby="h3t">
+  <header class="stephead">
+    <div><p class="eyebrow">Step 3 of 5</p><h1 id="h3t">Polish photos</h1>
+      <p class="sub">Levels, light, colour and sharpening run in your browser, the same way every time. Click a photo to set the point the 4:5 crop keeps in frame.</p></div>
+    <span class="chip" id="pickedChip">0 picked</span>
+  </header>
   <div class="edits" id="editGrid"></div>
-  <p class="note">Generative retouching (removing a stray object, relighting a face, extending a background) needs an image model such as Flux Kontext, Kling or Gemini image editing, called from a small server with its API key. That isn't connected yet; it's the next slice once there's hosting.</p>
+  <p class="note">Removing a stray object or extending a background needs an AI image edit, which this step does not do yet. For a new visual, use <b>Generate visual</b> on a post in step 5.</p>
 </section>
 
-<section class="step" id="s4">
-  <div class="stephead"><span class="num">STEP 4</span><h2>What else should this week cover?</h2></div>
-  <div class="grid2">
-    <label class="field"><span>Trends or news you've noticed</span><textarea id="trends" placeholder="Paste headlines, reels or topics doing well in IT, AI, fintech or travel this week"></textarea></label>
-    <label class="field"><span>Things we want to push</span><textarea id="focus" placeholder="e.g. Market Maya paper trading, hiring for Flutter devs, a client milestone"></textarea></label>
+<section class="step" id="s4" aria-labelledby="h4t">
+  <header class="stephead">
+    <div><p class="eyebrow">Step 4 of 5</p><h1 id="h4t">Brief and write</h1>
+      <p class="sub">Add anything Claude should know about this week. It plans the remaining posts, adds festivals and observances to double-check, and writes three options for every post.</p></div>
+  </header>
+  <div class="card stack">
+    <div class="grid2">
+      <label class="field"><span>Trends or news you've noticed</span><textarea id="trends" rows="6" placeholder="Paste headlines, reels or topics doing well in IT, AI, fintech or travel this week"></textarea></label>
+      <label class="field"><span>Things we want to push</span><textarea id="focus" rows="6" placeholder="e.g. Market Maya paper trading, hiring for Flutter developers, a client milestone"></textarea></label>
+    </div>
+    <p class="hint">Claude doesn't browse live trends from here, so paste what you've seen.</p>
   </div>
-  <p class="hint">Claude can't browse live trends from this page, so paste what you've seen. It will also suggest festivals and observances for the week and mark them to double-check.</p>
-  <div class="row"><button class="go" id="genBtn">Write the week's posts</button><button id="stopBtn" hidden>Stop</button><span class="status" id="genStatus"></span></div>
+  <div class="cta-bar">
+    <button class="go lg" id="genBtn">Write the week's posts</button><button id="stopBtn" class="ghost" hidden>Stop</button>
+    <span class="status" id="genStatus"></span>
+  </div>
 </section>
 
-<section class="step" id="s5">
-  <div class="stephead"><span class="num">STEP 5</span><h2>Review, approve, post</h2><span class="chip" id="approvedChip">0 approved</span></div>
-  <p class="hint">Switch between options, edit any slide or caption, or ask for a change in your own words. A post can be approved once every [CONFIRM] gap is filled.</p>
+<section class="step" id="s5" aria-labelledby="h5t">
+  <header class="stephead">
+    <div><p class="eyebrow">Step 5 of 5</p><h1 id="h5t">Review and post</h1>
+      <p class="sub">Switch between options, edit any slide or the caption, or ask for a change in your own words. A post can be approved once every [CONFIRM] gap is filled.</p></div>
+    <span class="chip" id="approvedChip">0 approved</span>
+  </header>
+  <div class="weekbar card">
+    <div class="tw"><table class="sched" id="sched"></table></div>
+    <div class="weekbar-act">
+      <button class="primary" id="exportAll">Download approved posts (.zip)</button>
+      <div class="status" id="exportStatus"></div>
+    </div>
+  </div>
   <div class="posts" id="posts"></div>
-  <div class="weekbar">
-    <div class="tw" style="flex:1 1 360px;min-width:0"><table class="sched" id="sched"></table></div>
-    <button class="primary" id="exportAll">Download approved posts (.zip)</button>
-  </div>
-  <div class="status" id="exportStatus"></div>
 </section>
+
 </main>
+<nav class="stepnav" id="stepnav" aria-label="Step navigation"></nav>
+</div>
 </div>
 
 <script>
@@ -237,6 +181,7 @@ Limits: kicker <= 5 words (uppercase label), headline <= 9 words, body <= 28 wor
 const OPTION_SHAPE = `{"label":"2-4 word name of the angle","format":"carousel or single","hook":"first line","caption":"full caption starting with the hook, no hashtags, under 1200 characters","hashtags":["#Multiicon","..."],"alt":"one plain sentence describing slide 1","why":"one line on why it could perform","risk":"one line: facts to confirm, consent, compliance","slides":[{"template":"photo-card","photo":1,"kicker":"","headline":"","body":""}]}`;
 const TPL = ["photo", "photo-card", "photo-light", "text-dark", "text-light", "number", "cta"];
 const PHOTO_TPL = new Set(["photo", "photo-card", "photo-light"]);
+const TPL_NAME = { "photo": "Full photo", "photo-card": "Photo card, dark", "photo-light": "Photo card, light", "text-dark": "Text, dark", "text-light": "Text, light", "number": "Numbered point", "cta": "Closing slide" };
 
 /* ---------- state ---------- */
 const KEY = "multiicon-planner-v1";
@@ -253,7 +198,7 @@ function defaults() {
 let S;
 try { S = Object.assign(defaults(), JSON.parse(localStorage.getItem(KEY) || "null") || {}); } catch { S = defaults(); }
 let saveT;
-function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }, 300); }
+function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} document.dispatchEvent(new CustomEvent("ps:change")); }, 300); }
 
 const photos = []; // in-memory only: {id,name,img,url,score,desc,reason,issues,pick,focal,edit,cache,cacheKey}
 const photoById = id => photos.find(p => p.id === id);
@@ -272,11 +217,11 @@ ready.then(() => { $("#noClaude").hidden = !!sample; refreshButtons(); });
 
 function errCopy(e) {
   const c = e && e.code;
-  if (c === "not_granted") return "Claude access was declined for this page. Reload the page to be asked again.";
+  if (c === "not_granted") return "Your session has expired. Reload the page and sign in again.";
   if (c === "rate_limited") return "Too many requests at once. Wait a minute, then try again.";
   if (c === "invalid_json") return "Claude's reply came back in the wrong shape. Try again.";
   if (c === "cancelled") return "Stopped.";
-  if (c === "images_unavailable") return "This view can't send photos to Claude. Open the page on claude.ai.";
+  if (c === "images_unavailable") return "Claude can't look at photos right now. Tap photos to pick them yourself.";
   return "Claude couldn't answer" + (c ? " (" + c + ")" : "") + ". Try again.";
 }
 function setStatus(el, text, err) { el.textContent = text || ""; el.classList.toggle("err", !!err); }
@@ -352,9 +297,10 @@ function addFiles(list) {
 }
 function renderPhotos() {
   const g = $("#photoGrid");
+  const pc = $("#photoCount"); if (pc) pc.textContent = photos.length ? `${photos.filter(p => p.pick).length} of ${photos.length} picked` : "";
   g.innerHTML = photos.map(p => `<div class="ph${p.pick ? " pick" : ""}" data-id="${p.id}" title="${esc(p.reason || p.name)}" role="button" tabindex="0" aria-pressed="${p.pick}">
     <img src="${p.url}" alt="${esc(p.desc || p.name)}">${p.score != null ? `<span class="score">${p.score.toFixed(1)}</span>` : ""}
-    <span class="tick">${p.pick ? "✓" : "+"}</span>${p.reason ? `<span class="why">${esc(p.reason)}</span>` : ""}</div>`).join("");
+    <span class="tick" aria-hidden="true">${p.pick ? '<svg viewBox="0 0 20 20"><path d="m5 10.5 3.2 3L15 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '<svg viewBox="0 0 20 20"><path d="M10 5v10M5 10h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'}</span>${p.reason ? `<span class="why">${esc(p.reason)}</span>` : ""}</div>`).join("");
   g.querySelectorAll(".ph").forEach(el => {
     const tog = () => { const p = photoById(el.dataset.id); p.pick = !p.pick; renderPhotos(); renderEdits(); redrawAll(); };
     el.onclick = tog; el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tog(); } };
@@ -369,7 +315,7 @@ function scaledBlob(img, max = 1024, q = .85) {
 }
 $("#pickBtn").onclick = async () => {
   const st = $("#pickStatus"), b = $("#pickBtn");
-  if (!imgLimits) { setStatus(st, "This view can't send photos to Claude. Open the page on claude.ai, or tap photos to pick them yourself.", true); return; }
+  if (!imgLimits) { setStatus(st, "Claude can't look at photos right now. Tap photos to pick them yourself.", true); return; }
   b.disabled = true;
   const per = Math.max(1, Math.min(imgLimits.maxCount || 5, 8));
   const ev = S.ev;
@@ -459,13 +405,13 @@ function renderEdits() {
   $("#pickedChip").textContent = picks.length + " picked";
   $("#pickedChip").className = "chip " + (picks.length ? "acc" : "");
   const g = $("#editGrid");
-  if (!picks.length) { g.innerHTML = `<p class="hint">Pick photos in step 2 and they'll show up here for polishing.</p>`; return; }
+  if (!picks.length) { g.innerHTML = `<div class="empty"><b>No photos picked yet</b><span>Pick photos in step 2 and they show up here for polishing.</span><a class="btn" href="#photos">Go to event photos</a></div>`; return; }
   g.innerHTML = picks.map(p => `<div class="ed" data-id="${p.id}">
     <canvas aria-label="Edited photo, click to set the crop focus"></canvas>
-    ${p.issues && p.issues !== "none" ? `<div class="hint">Claude noticed: ${esc(p.issues)}</div>` : ""}
-    <label class="approve" style="font-size:12.5px"><input type="checkbox" data-k="auto" ${p.edit.auto ? "checked" : ""}> Auto levels</label>
+    ${p.issues && p.issues !== "none" ? `<div class="hint issue">Claude noticed: ${esc(p.issues)}</div>` : ""}
+    <label class="check sm"><input type="checkbox" data-k="auto" ${p.edit.auto ? "checked" : ""}> Auto levels</label>
     ${SLIDERS.map(([k, l, mn, mx]) => `<label class="sl">${l}<input type="range" min="${mn}" max="${mx}" value="${p.edit[k]}" data-k="${k}"><output>${p.edit[k]}</output></label>`).join("")}
-    <div class="row"><button class="small" data-act="orig">Hold to see original</button><button class="small" data-act="reset">Reset</button></div>
+    <div class="row"><button class="small ghost" data-act="orig">Hold to compare</button><button class="small ghost" data-act="reset">Reset</button></div>
   </div>`).join("");
   g.querySelectorAll(".ed").forEach(el => {
     const p = photoById(el.dataset.id), cv = $("canvas", el);
@@ -597,40 +543,47 @@ function renderPosts() {
   list.forEach(p => g.appendChild(buildCard(p)));
   renderSched();
 }
-function kindChip(p) { return p.kind === "event" ? `<span class="chip acc">Event post</span>` : p.kind === "example" ? `<span class="chip">Example</span>` : `<span class="chip">Content post</span>`; }
+function kindChip(p) { return p.kind === "event" ? `<span class="chip acc">Event</span>` : p.kind === "example" ? `<span class="chip">Example</span>` : `<span class="chip">Content</span>`; }
 function buildCard(p) {
-  const el = document.createElement("article"); el.className = "post" + (p.approved ? " approved" : ""); el.dataset.id = p.id;
+  const el = document.createElement("article"); el.className = "post" + (p.approved ? " approved" : ""); el.dataset.id = p.id; el.id = "post-" + p.id;
   const when = p.kind === "example" ? "" : `<span class="when"><input type="date" class="pday" value="${esc(p.day)}" aria-label="Post date"><input type="time" class="ptime" value="${esc(p.time)}" aria-label="Post time"></span>`;
   if (p.state !== "ready") {
-    el.innerHTML = `<div class="phead">${kindChip(p)}${when}</div><p class="topic">${esc(p.topic || "")}</p>
-      <div class="skel"></div><div class="live">${p.state === "writing" ? "Writing options…" : p.state === "error" ? esc(p.error || "Failed") : "Waiting its turn…"}</div>
-      ${p.state === "error" ? `<button class="small" data-act="regen">Try again</button>` : ""}`;
+    el.innerHTML = `<header class="phead"><div class="ptitle"><div class="chips">${kindChip(p)}</div><p class="topic">${esc(p.topic || "")}</p></div>${when}</header>
+      <div class="pending"><div class="skel"></div><div class="pending-tx"><div class="live">${p.state === "writing" ? "Writing options…" : p.state === "error" ? esc(p.error || "Failed") : "Waiting its turn…"}</div>
+      ${p.state === "error" ? `<button class="small" data-act="regen">Try again</button>` : ""}</div></div>`;
     wireWhen(el, p);
     const rb = $("[data-act=regen]", el); if (rb) rb.onclick = () => runPosts([p]);
     return el;
   }
-  el.innerHTML = `<div class="phead">${kindChip(p)}<span class="chip pstate"></span>${when}</div>
-    <p class="topic">${esc(p.topic || "")}</p>
-    <div class="opts" role="group" aria-label="Options">${p.options.map((o, i) => `<button data-o="${i}" aria-pressed="${i === p.sel}">${String.fromCharCode(65 + i)} · ${esc(o.label || o.format)}</button>`).join("")}</div>
-    <div class="pv"><canvas width="1080" height="1350"></canvas></div>
-    <div class="pvnav"><button class="small" data-act="prev" aria-label="Previous slide">←</button><span class="dots"></span><button class="small" data-act="next" aria-label="Next slide">→</button></div>
-    <details class="se"><summary>Edit this slide</summary><div class="grid">
-      <label class="field"><span>Layout</span><select class="s-tpl">${TPL.map(t => `<option>${t}</option>`).join("")}</select></label>
-      <label class="field s-phw"><span>Photo</span><select class="s-ph"></select></label>
-      <label class="field"><span>Label</span><input type="text" class="s-kick"></label>
-      <label class="field"><span>Headline</span><textarea class="s-head" rows="2" style="min-height:52px"></textarea></label>
-      <label class="field"><span>Body</span><textarea class="s-body" rows="3"></textarea></label>
-      <div class="row"><button class="small" data-act="addslide">Add slide after</button><button class="small" data-act="delslide">Remove slide</button></div>
-    </div></details>
-    <label class="field"><span>Caption</span><textarea class="cap" rows="7"></textarea><span class="cnt"></span></label>
-    <label class="field"><span>Hashtags</span><input type="text" class="tags"></label>
-    <label class="field"><span>Alt text</span><input type="text" class="alt"></label>
-    <div class="meta"><div><b>Why it could work:</b> <span class="why"></span></div><div><b>Check:</b> <span class="risk"></span></div></div>
-    <div class="ask"><input type="text" class="askin" placeholder="Ask for a change, e.g. shorter and more playful" aria-label="Change request"><button class="small" data-act="rewrite">Rewrite</button></div>
-    <div class="row"><button class="small" data-act="regen">Three new options</button><button class="small" data-act="visual">Generate visual with AI</button><span class="status pstatus"></span></div>
-    <div class="visuals" hidden></div>
-    <label class="approve"><input type="checkbox" class="appr"> <span class="apprtext">I've checked the facts, the photos and the caption. Approve this option.</span></label>
-    <button class="go" data-act="post">Post / Schedule</button>
+  el.innerHTML = `<header class="phead"><div class="ptitle"><div class="chips">${kindChip(p)}<span class="chip pstate"></span></div><p class="topic">${esc(p.topic || "")}</p></div>${when}</header>
+    <div class="opts" role="group" aria-label="Options">${p.options.map((o, i) => `<button data-o="${i}" aria-pressed="${i === p.sel}"><b>${String.fromCharCode(65 + i)}</b><span>${esc(o.label || o.format)}</span></button>`).join("")}</div>
+    <div class="pbody">
+      <div class="pleft">
+        <div class="pv"><canvas width="1080" height="1350"></canvas></div>
+        <div class="pvnav"><button class="icon" data-act="prev" aria-label="Previous slide"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="dots"></span><button class="icon" data-act="next" aria-label="Next slide"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+        <details class="se"><summary>Edit this slide</summary><div class="grid">
+          <label class="field"><span>Layout</span><select class="s-tpl">${TPL.map(t => `<option value="${t}">${TPL_NAME[t]}</option>`).join("")}</select></label>
+          <label class="field s-phw"><span>Photo</span><select class="s-ph"></select></label>
+          <label class="field"><span>Label</span><input type="text" class="s-kick"></label>
+          <label class="field"><span>Headline</span><textarea class="s-head" rows="2"></textarea></label>
+          <label class="field"><span>Body</span><textarea class="s-body" rows="3"></textarea></label>
+          <div class="row"><button class="small" data-act="addslide">Add slide after</button><button class="small ghost" data-act="delslide">Remove slide</button></div>
+        </div></details>
+        <div class="visuals" hidden></div>
+      </div>
+      <div class="pright">
+        <label class="field"><span class="lbl-row">Caption <span class="cnt"></span></span><textarea class="cap" rows="9"></textarea></label>
+        <label class="field"><span>Hashtags</span><input type="text" class="tags"></label>
+        <label class="field"><span>Alt text</span><input type="text" class="alt"></label>
+        <dl class="meta"><div><dt>Why it could work</dt><dd class="why"></dd></div><div><dt>Check before approving</dt><dd class="risk"></dd></div></dl>
+        <div class="ask"><input type="text" class="askin" placeholder="Ask for a change, e.g. shorter and more playful" aria-label="Change request"><button class="small" data-act="rewrite">Rewrite</button></div>
+        <div class="row tools"><button class="small ghost" data-act="regen">Three new options</button><button class="small ghost" data-act="visual"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l1.7 4.3 4.3 1.7-4.3 1.7L10 14.5l-1.7-4.3L4 8.5l4.3-1.7L10 2.5Z" fill="currentColor"/></svg>Generate visual</button><span class="status pstatus"></span></div>
+      </div>
+    </div>
+    <footer class="pfoot">
+      <label class="approve"><input type="checkbox" class="appr"> <span class="apprtext">I've checked the facts, the photos and the caption. Approve this option.</span></label>
+      <button class="go" data-act="post">Post / Schedule</button>
+    </footer>
     <div class="panel" hidden></div>`;
   wireWhen(el, p);
   const cv = $(".pv canvas", el);
@@ -654,7 +607,7 @@ function buildCard(p) {
   $("[data-act=visual]", el).onclick = () => document.dispatchEvent(new CustomEvent("ps:visual", { detail: { el, p } }));
   $(".appr", el).onchange = e => { p.approved = e.target.checked; save(); el.classList.toggle("approved", p.approved); updateApproveGate(el); renderSched(); };
   $("[data-act=post]", el).onclick = () => { if (window.PSStudio && window.PSStudio.post) window.PSStudio.post(el, p); else openPostPanel(el, p); };
-  if (p.kind === "example") { el.querySelectorAll("[data-act=regen],[data-act=rewrite],.askin,.appr,[data-act=post]").forEach(b => b.disabled = true); $(".apprtext", el).textContent = "Example only."; }
+  if (p.kind === "example") { el.classList.add("example"); el.querySelectorAll("[data-act=regen],[data-act=rewrite],.askin,.appr,[data-act=post]").forEach(b => b.disabled = true); $(".apprtext", el).textContent = "This is an example. Write the week in step 4 to get your own posts."; }
   fill(el, p);
   return el;
 }
@@ -778,7 +731,7 @@ async function runPosts(list) {
 $("#stopBtn").onclick = () => ctl && ctl.abort();
 $("#genBtn").onclick = async () => {
   const st = $("#genStatus");
-  if (!S.agreed) { setStatus(st, "Agree the number of posts in step 1 first.", true); $("#s1").scrollIntoView({ behavior: "smooth" }); return; }
+  if (!S.agreed) { setStatus(st, "Agree the number of posts in step 1 first.", true); if (window.PSNav) window.PSNav.go("s1"); return; }
   const E = Math.min(S.eventCount, S.postCount), K = S.postCount - E;
   const picks = photos.filter(p => p.pick).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   if (E > 0 && !picks.length) { setStatus(st, "Add and pick event photos in step 2 first, or set event posts to None.", true); return; }
@@ -788,6 +741,7 @@ $("#genBtn").onclick = async () => {
   const posts = [];
   for (let j = 0; j < E; j++) posts.push({ id: uid(), kind: "event", day: addDays(S.weekStart, j), time: "19:00", topic: E > 1 ? `Event recap, part ${j + 1}` : "Event recap", photoIds: picks.filter((_, i) => i % E === j).slice(0, 10).map(p => p.id), options: [], sel: 0, slide: 0, approved: false, state: "waiting" });
   S.posts = posts; renderPosts();
+  if (window.PSNav) window.PSNav.go("s5");
   if (K > 0) {
     setStatus(st, "Planning the week…");
     let slots = [];
@@ -850,7 +804,7 @@ async function addPostToZip(zip, p, folder) {
 async function saveZip(zip, name, st) {
   if (!window.JSZip) { setStatus(st, "The zip library didn't load. Reload the page and try again.", true); return false; }
   const data = await zip.generateAsync({ type: "blob" });
-  if (!downloads) { setStatus(st, "Downloads aren't available in this view. Open the page on claude.ai.", true); return false; }
+  if (!downloads) { setStatus(st, "Downloads aren't available in this browser.", true); return false; }
   try { await downloads.save({ filename: name, data }); setStatus(st, "Saved " + name + "."); return true; }
   catch (e) { setStatus(st, e && e.code === "declined" ? "Download cancelled." : "Couldn't save the file (" + (e && e.code || "error") + ").", e && e.code !== "declined"); return false; }
 }
@@ -881,14 +835,14 @@ $("#exportAll").onclick = async () => {
 };
 function renderSched() {
   const t = $("#sched");
-  if (!S.posts.length) { t.innerHTML = ""; return; }
+  if (!S.posts.length) { t.innerHTML = `<tbody><tr><td class="sched-empty">No posts yet. Write the week in step 4 and the schedule appears here.</td></tr></tbody>`; return; }
   const rows = [...S.posts].sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time));
-  t.innerHTML = `<thead><tr><th>When</th><th>Post</th><th>Status</th></tr></thead><tbody>` + rows.map(p => `<tr><td class="tab">${esc(fmtDay(p.day))} ${esc(p.time)}</td><td>${esc(p.topic)}${p.state === "ready" ? " · " + esc(opt(p).label) : ""}</td><td>${p.exported ? "Downloaded" : p.approved ? "Approved" : p.state === "ready" ? "Draft" : p.state === "error" ? "Failed" : "Writing"}</td></tr>`).join("") + "</tbody>";
+  t.innerHTML = `<thead><tr><th>When</th><th>Post</th><th>Status</th></tr></thead><tbody>` + rows.map(p => { const [lbl, cls] = p.exported ? ["Downloaded", "ok"] : p.approved ? ["Approved", "ok"] : p.state === "ready" ? ["Draft", "warn"] : p.state === "error" ? ["Failed", "bad"] : ["Writing", ""]; return `<tr><td class="tab"><b>${esc(fmtDay(p.day))}</b> ${esc(p.time)}</td><td><a href="#post-${esc(p.id)}" class="jump">${esc(p.topic)}</a>${p.state === "ready" ? `<small>${esc(opt(p).label)}</small>` : ""}</td><td><span class="chip ${cls}">${lbl}</span></td></tr>`; }).join("") + "</tbody>";
   $("#approvedChip").textContent = S.posts.filter(x => x.approved).length + " approved";
 }
 
 /* ---------- hooks for studio.js (server features) ---------- */
-window.PS = { get S() { return S; }, photos, photoById, renderPhotos, renderEdits, redrawAll, opt, cur, slideCanvas, save, fill, fillSlide, replaceCard, updateApproveGate, renderSched, fullCaption, slug, setStatus, errCopy, fontsReady, esc, uid, EDIT0, PHOTO_TPL, get sample() { return sample; } };
+window.PS = { get S() { return S; }, photos, photoById, fmtDay, addDays, renderPhotos, renderEdits, redrawAll, opt, cur, slideCanvas, save, fill, fillSlide, replaceCard, updateApproveGate, renderSched, fullCaption, slug, setStatus, errCopy, fontsReady, esc, uid, EDIT0, PHOTO_TPL, get sample() { return sample; } };
 document.dispatchEvent(new CustomEvent("ps:ready"));
 
 /* ---------- buttons + boot ---------- */
@@ -903,6 +857,7 @@ renderAgree(); renderPhotos(); renderEdits(); renderPosts();
 fontsReady.then(redrawAll);
 })();
 </script>
+<script src="/app.js"></script>
 <script src="/studio.js"></script>
 </body>
 </html>
