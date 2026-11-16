@@ -6,7 +6,7 @@ import { one, query } from "../db/index.js";
 import { audit } from "../audit.js";
 import { instagramStatus } from "../publish/instagram.js";
 import { cancelScheduled, schedulePost, type PostRow } from "../publish/scheduler.js";
-import { getAsset, mediaUrl } from "../storage.js";
+import { getAsset, mediaHref } from "../storage.js";
 
 // Plans hold the planner's state per week; posts hold what gets approved and published.
 // Approval binds a hash of caption + images (ADR-008) so a later edit voids it.
@@ -42,7 +42,7 @@ function approvalHash(caption: string | null, renderIds: string[]): string {
 
 async function withUrls(p: PostRow) {
   const assets = await Promise.all(p.render_asset_ids.map((id) => getAsset(id)));
-  return { ...p, render_urls: assets.filter((a): a is NonNullable<typeof a> => !!a).map((a) => mediaUrl(a.storage_key)) };
+  return { ...p, render_urls: assets.filter((a): a is NonNullable<typeof a> => !!a).map((a) => mediaHref(a.storage_key)) };
 }
 
 export function registerPlanRoutes(app: FastifyInstance) {

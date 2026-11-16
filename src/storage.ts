@@ -27,6 +27,12 @@ export interface MediaAsset {
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
+// For the browser: same-origin path, so it works whatever PUBLIC_BASE_URL says.
+export function mediaHref(key: string): string {
+  return `/media/${key}`;
+}
+
+// For Instagram and anything outside the browser: absolute URL on PUBLIC_BASE_URL.
 export function mediaUrl(key: string): string {
   return `${config.PUBLIC_BASE_URL.replace(/\/$/, "")}/media/${key}`;
 }
@@ -99,5 +105,5 @@ export async function deleteAsset(asset: MediaAsset): Promise<void> {
 }
 
 export function publicAsset(a: MediaAsset) {
-  return { id: a.id, url: mediaUrl(a.storage_key), kind: a.kind, provider: a.provider, prompt: a.prompt, width: a.width, height: a.height, mime: a.mime, meta: a.meta };
+  return { id: a.id, url: mediaHref(a.storage_key), kind: a.kind, provider: a.provider, prompt: a.prompt, width: a.width, height: a.height, mime: a.mime, meta: a.meta };
 }

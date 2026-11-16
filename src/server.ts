@@ -67,6 +67,9 @@ async function main() {
   const app = await buildServer();
   await startScheduler();
   await app.listen({ port: config.PORT, host: config.HOST });
+  if (/localhost|127\.0\.0\.1/.test(config.PUBLIC_BASE_URL) && config.NODE_ENV === "production") {
+    app.log.warn(`PUBLIC_BASE_URL is ${config.PUBLIC_BASE_URL}. Set it to this site's public https address in .env, or Instagram cannot fetch images when publishing.`);
+  }
   const shutdown = async () => {
     await app.close();
     await stopScheduler();
