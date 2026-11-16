@@ -1,12 +1,12 @@
 import sharp from "sharp";
 import { extractJson, sampleText } from "../ai/claude.js";
-import { BRAND_FACTS } from "../ai/brand.js";
+import { getBrand, type Brand } from "../ai/brand.js";
 import { renderSvg, sanitizeSvg } from "../images/claude-design.js";
 
 // Claude designs each slide whole: art, layout, typography and the slide's own words, as SVG.
 // Step 1 plans a look for the post (one family, every slide different). Step 2 designs the
 // slides in parallel. The server then checks the words, checks the text stays on the canvas,
-// adds the Multiicon wordmark itself and renders a 1080x1350 JPEG.
+// adds the brand's wordmark itself and renders a 1080x1350 JPEG.
 
 export const W = 1080;
 export const H = 1350;
@@ -26,6 +26,7 @@ export interface SlideInput extends SlideText {
   photo?: Buffer; // the user's own photo for this slide, already edited
 }
 export interface PostInput {
+  brand?: string;
   topic: string;
   hook?: string;
   caption?: string;
@@ -48,9 +49,14 @@ export interface SlideResult {
 
 /* ---------------- prompts ---------------- */
 
-const DESIGNER = `You are the senior art director and graphic designer for Multiicon (@multiicon.official), an Indian product-based IT company in Rajkot. You design Instagram carousels that look hand-made by a top studio: editorial, confident, modern, never template-like.
-Brand anchors that every slide keeps: the saffron accent #f2a33a appears somewhere on every slide; deep navy #121a33 and warm cream #f4f0e8 are home colours, but a post may bring its own palette around them.
+function designerFor(b: Brand): string {
+  const l = b.slide;
+  return `You are the senior art director and graphic designer for ${b.name} (${b.handle}). ${b.role}. You design Instagram carousels that look hand-made by a top studio: editorial, confident, modern, never template-like.
+Brand look: ${l.style}
+Brand anchors that every slide keeps: the accent ${l.accent} appears somewhere on every slide; ${l.dark} (dark) and ${l.light} (light) are home colours, with support colours ${l.support.join(" and ")}. A post may bring its own palette around them but must still read as ${b.name}.
+House type pairing: display ${l.fonts.display}, text ${l.fonts.text}; a post may vary it within the available fonts.
 Fonts available (use only these, by exact family name): ${FONTS.join(", ")}.`;
+}
 
 function themePrompt(post: PostInput): string {
   const slides = post.slides
@@ -79,11 +85,12 @@ Rules for the plan:
 - Pick a palette with real contrast (never pale or washed out) and say exact hex values.
 - For each slide say whether the bottom band behind the wordmark will be dark or light ("mark": "light" means light wordmark on a dark area).
 Reply with only JSON:
-{"name":"2-4 word name of the look","mood":"one line","palette":{"background":["#hex",...],"ink":"#hex","accent":"#f2a33a","support":["#hex",...]},"type":{"display":"font family + weight","text":"font family + weight"},"motifs":["..."],"slides":[{"concept":"what this slide shows and how","technique":"main technique","layout":"where text and art sit","mark":"light|dark"}]}
+{"name":"2-4 word name of the look","mood":"one line","palette":{"background":["#hex",...],"ink":"#hex","accent":"#hex (the brand accent)","support":["#hex",...]},"type":{"display":"font family + weight","text":"font family + weight"},"motifs":["..."],"slides":[{"concept":"what this slide shows and how","technique":"main technique","layout":"where text and art sit","mark":"light|dark"}]}
 The slides array must have exactly ${post.slides.length} entries, in order.`;
 }
 
 function slidePrompt(post: PostInput, theme: Theme, i: number, feedback?: string): string {
+  const b = getBrand(post.brand);
   const s = post.slides[i];
   const plan = theme.slides[i] ?? theme.slides[theme.slides.length - 1];
   const words = [
@@ -91,7 +98,7 @@ function slidePrompt(post: PostInput, theme: Theme, i: number, feedback?: string
     s.template === "number" && s.kicker && `The label is a big number on this slide: ${JSON.stringify(s.kicker)}`,
     s.headline && `HEADLINE: ${JSON.stringify(s.headline)}`,
     s.body && `BODY: ${JSON.stringify(s.body)}`,
-    s.template === "cta" && `CALL TO ACTION LINE: "Follow @multiicon.official"`,
+    s.template === "cta" && `CALL TO ACTION LINE: "Follow ${b.handle}"`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -105,7 +112,7 @@ ${s.photo ? `\nThe team's photo for this slide is attached. Place it with <image
 
 Technical rules:
 - One <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" data-mark="light|dark"> element. data-mark says whether the wordmark the server adds in the bottom band should be light or dark.
-- Keep the bottom ${FOOTER}px band free of words and busy detail (background, gradient or texture only). The server adds the MULTIICON wordmark and the page number there, so never draw a logo, wordmark, handle or page number yourself (except the call-to-action line above).
+- Keep the bottom ${FOOTER}px band free of words and busy detail (background, gradient or texture only). The server adds the ${wordmarkText(b)} wordmark and the page number there, so never draw a logo, wordmark, handle or page number yourself (except the call-to-action line above).
 - All words go in <text> elements positioned with x and y, lines as <tspan x=".." dy="..">. No transform on <text> or on any group that contains text; no textPath. Keep every word at least ${MARGIN}px inside the left, right and top edges and above the bottom band.
 - SVG has no automatic wrapping: break lines yourself. Width guide per character: Inter 800 about 0.58 x font-size, Inter 400 about 0.52, IBM Plex Serif about 0.5, IBM Plex Sans Condensed about 0.44, IBM Plex Mono 0.6. Keep each line inside ${W - 2 * MARGIN}px.
 - Headline at least 56px, body at least 30px, label at least 24px, so it reads on a phone.
@@ -140,8 +147,9 @@ function words(s: string): string[] {
 }
 
 // Only the slide's own words may appear (rule: no invented facts), and most of them must.
-export function checkWords(svg: string, s: SlideText, index: number, total: number): string | null {
-  const allowed = new Set(words([s.kicker, s.headline, s.body, "follow @multiicon.official multiicon", `${index + 1} ${total}`].filter(Boolean).join(" ")));
+export function checkWords(svg: string, s: SlideText, index: number, total: number, brand?: string): string | null {
+  const b = getBrand(brand);
+  const allowed = new Set(words([s.kicker, s.headline, s.body, `follow ${b.handle} ${b.name} ${wordmarkText(b)}`, `${index + 1} ${total}`].filter(Boolean).join(" ")));
   const found = svgWords(svg);
   const extra = [...new Set(found.filter((w) => !allowed.has(w)))];
   if (extra.length) return `these words are not in the slide text and must be removed: ${extra.slice(0, 12).join(", ")}`;
@@ -186,11 +194,17 @@ function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
 
-export function footerSvg(mark: "light" | "dark", label: string): string {
-  const fg = mark === "light" ? "#ffffff" : "#121a33";
+export function wordmarkText(b: Brand): string {
+  return b.wordmark.map(([t]) => t).join("");
+}
+
+export function footerSvg(mark: "light" | "dark", label: string, brand?: string): string {
+  const b = getBrand(brand);
+  const fg = mark === "light" ? "#ffffff" : b.slide.dark;
   const y = H - 62;
+  const wm = b.wordmark.map(([t, c]) => `<tspan fill="${c === "accent" ? b.slide.accent : fg}">${esc(t)}</tspan>`).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-<text x="${MARGIN + 28}" y="${y}" font-family="Inter, sans-serif" font-size="24" font-weight="800" letter-spacing="4.5" fill="${fg}">MULTI<tspan fill="#f2a33a">I</tspan>CON</text>
+<text x="${MARGIN + 28}" y="${y}" font-family="Inter, sans-serif" font-size="24" font-weight="800" letter-spacing="4.5" fill="${fg}" xml:space="preserve">${wm}</text>
 <text x="${W - MARGIN - 28}" y="${y}" text-anchor="end" font-family="Inter, sans-serif" font-size="22" font-weight="700" letter-spacing="2" fill="${fg}">${esc(label)}</text>
 </svg>`;
 }
@@ -225,14 +239,15 @@ const THEME_SCHEMA = {
 };
 
 // Used only if planning fails twice, so the slides still get designed.
-function fallbackTheme(n: number): Theme {
+function fallbackTheme(n: number, brand?: string): Theme {
+  const b = getBrand(brand);
   const techniques = ["bold typographic poster with layered gradient mesh and soft blur", "glass card over glowing shapes with a simple diagram", "split-colour block layout with line art", "isometric 2.5D object built from shaded polygons", "oversized number with grid and dot pattern", "editorial layout with grain texture and cut-out shapes", "duotone frame and thin rules", "data graphic with clean bars and labels"];
   return {
-    name: "Multiicon night and saffron",
+    name: `${b.name} house look`,
     mood: "confident, calm, modern",
-    palette: { background: ["#121a33", "#0b1022"], ink: "#ffffff", accent: "#f2a33a", support: ["#f4f0e8", "#2bd4c0"] },
-    type: { display: "Inter Display 800", text: "Inter 400" },
-    motifs: ["fine grid", "saffron dot"],
+    palette: { background: [b.slide.dark, b.slide.darker], ink: "#ffffff", accent: b.slide.accent, support: [b.slide.light, ...b.slide.support] },
+    type: { display: b.slide.fonts.display, text: b.slide.fonts.text },
+    motifs: ["fine grid", "accent dot"],
     slides: Array.from({ length: n }, (_, i) => ({ concept: "show the slide's idea simply", technique: techniques[i % techniques.length], layout: "words on the left, art on the right or above", mark: i % 3 === 1 ? "dark" : "light" })),
   };
 }
@@ -241,11 +256,11 @@ export async function planTheme(post: PostInput): Promise<Theme> {
   const images = post.slides.filter((s) => s.photo).slice(0, 4).map((s) => ({ data: s.photo!, mime: "image/jpeg" as const }));
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const text = await sampleText({ system: DESIGNER, prompt: themePrompt(post), images, task: "design.theme", effort: "medium", maxTokens: 32000, schema: THEME_SCHEMA });
+      const text = await sampleText({ system: designerFor(getBrand(post.brand)), prompt: themePrompt(post), images, task: "design.theme", effort: "medium", maxTokens: 32000, schema: THEME_SCHEMA });
       const theme = extractJson<Theme>(text);
       if (theme && Array.isArray(theme.slides) && theme.slides.length) {
         // Pad or trim so every slide has a plan.
-        while (theme.slides.length < post.slides.length) theme.slides.push(fallbackTheme(post.slides.length).slides[theme.slides.length]);
+        while (theme.slides.length < post.slides.length) theme.slides.push(fallbackTheme(post.slides.length, post.brand).slides[theme.slides.length]);
         theme.slides = theme.slides.slice(0, post.slides.length);
         return theme;
       }
@@ -253,7 +268,7 @@ export async function planTheme(post: PostInput): Promise<Theme> {
       console.error(`[design] theme attempt ${attempt} failed: ${(e as Error).message}`);
     }
   }
-  return fallbackTheme(post.slides.length);
+  return fallbackTheme(post.slides.length, post.brand);
 }
 
 async function photoDataUri(photo: Buffer): Promise<string> {
@@ -263,14 +278,15 @@ async function photoDataUri(photo: Buffer): Promise<string> {
 
 // Everything after Claude's reply: sanitise, check the words and their placement, swap in the
 // photo, render, add the wordmark. Returns the JPEG, or the problem to send back to Claude.
-export async function finishSlide(reply: string, s: SlideInput, i: number, total: number): Promise<{ image: Buffer } | { problem: string }> {
+export async function finishSlide(reply: string, s: SlideInput, i: number, total: number, brand?: string): Promise<{ image: Buffer } | { problem: string }> {
+  const b = getBrand(brand);
   let svg: string;
   try {
     svg = sanitizeSvg(reply, { allowPhotos: !!s.photo, allowText: true });
   } catch {
     return { problem: "the reply did not contain an <svg> element" };
   }
-  const problem = checkWords(svg, s, i, total) ?? (await checkTextBounds(svg));
+  const problem = checkWords(svg, s, i, total, brand) ?? (await checkTextBounds(svg));
   if (problem) return { problem };
   if (s.photo) {
     const uri = await photoDataUri(s.photo);
@@ -278,10 +294,10 @@ export async function finishSlide(reply: string, s: SlideInput, i: number, total
   }
   const mark = /data-mark\s*=\s*["']dark["']/i.test(svg.slice(0, 400)) ? "dark" : "light";
   const art = await renderSvg(svg, W, H);
-  const label = total > 1 ? `${i + 1} / ${total}` : "@multiicon.official";
+  const label = total > 1 ? `${i + 1} / ${total}` : b.handle;
   const image = await sharp(art)
-    .composite([{ input: Buffer.from(footerSvg(mark, label)), top: 0, left: 0 }])
-    .flatten({ background: "#121a33" })
+    .composite([{ input: Buffer.from(footerSvg(mark, label, brand)), top: 0, left: 0 }])
+    .flatten({ background: b.slide.dark })
     .jpeg({ quality: 92, mozjpeg: true })
     .toBuffer();
   return { image };
@@ -295,7 +311,7 @@ export async function designSlide(post: PostInput, theme: Theme, i: number): Pro
   for (let attempt = 1; attempt <= 3; attempt++) {
     let text: string;
     try {
-      text = await sampleText({ system: `${DESIGNER}\n\n${BRAND_FACTS}`, prompt: slidePrompt(post, theme, i, feedback), images, task: "design.slide", effort: "medium", maxTokens: 32000 });
+      text = await sampleText({ system: `${designerFor(getBrand(post.brand))}\n\n${getBrand(post.brand).facts}`, prompt: slidePrompt(post, theme, i, feedback), images, task: "design.slide", effort: "medium", maxTokens: 32000 });
     } catch (e) {
       // A cut-off or failed reply gets another go; rate limits are already retried by the SDK.
       feedback = (e as { code?: string }).code === "truncated" ? "the reply was cut off before </svg>: use fewer, simpler shapes and stay under 20 KB" : undefined;
@@ -303,7 +319,7 @@ export async function designSlide(post: PostInput, theme: Theme, i: number): Pro
       if (attempt === 3) throw e;
       continue;
     }
-    const r = await finishSlide(text, s, i, total);
+    const r = await finishSlide(text, s, i, total, post.brand);
     if ("image" in r) return r.image;
     feedback = r.problem;
     if (attempt === 3) throw new Error(`Slide ${i + 1} could not be designed cleanly (${feedback})`);

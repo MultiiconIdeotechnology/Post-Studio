@@ -3,12 +3,14 @@ import { z } from "zod";
 import { requireAuth } from "../auth.js";
 import { claudeConfigured } from "../ai/claude.js";
 import { designPost, type SlideInput } from "../design/post-design.js";
+import { BRAND_IDS } from "../ai/brand.js";
 import { getAsset, publicAsset, readAsset, saveAsset } from "../storage.js";
 import { audit } from "../audit.js";
 import { keepAlive } from "./keepalive.js";
 
 const Body = z.object({
   planId: z.string().uuid().optional(),
+  brand: z.enum(BRAND_IDS as [string, ...string[]]).default("multiicon"),
   mode: z.enum(["fresh", "variation"]).default("fresh"),
   theme: z.unknown().optional(),
   topic: z.string().max(400).default(""),
@@ -43,17 +45,17 @@ export function registerDesignRoutes(app: FastifyInstance) {
       reply,
       async () => {
         const started = Date.now();
-        const out = await designPost({ topic: body.topic, hook: body.hook, caption: body.caption, slides, mode: body.mode, previousTheme: body.theme });
+        const out = await designPost({ brand: body.brand, topic: body.topic, hook: body.hook, caption: body.caption, slides, mode: body.mode, previousTheme: body.theme });
         const results = [];
         for (const r of out.slides) {
           if (!r.image) {
             results.push({ error: r.error ?? "Design failed" });
             continue;
           }
-          const asset = await saveAsset({ buffer: r.image, mime: "image/jpeg", kind: "generated", planId: body.planId ?? null, provider: "claude-design", prompt: body.topic, forceJpeg: true, meta: { theme: out.theme.name } });
+          const asset = await saveAsset({ buffer: r.image, mime: "image/jpeg", kind: "generated", planId: body.planId ?? null, provider: "claude-design", prompt: body.topic, forceJpeg: true, meta: { theme: out.theme.name, brand: body.brand } });
           results.push(publicAsset(asset));
         }
-        await audit("user", "post.designed", "plan", body.planId, { slides: results.length, failed: results.filter((r) => "error" in r).length, ms: Date.now() - started, mode: body.mode });
+        await audit("user", "post.designed", "plan", body.planId, { brand: body.brand, slides: results.length, failed: results.filter((r) => "error" in r).length, ms: Date.now() - started, mode: body.mode });
         return { theme: out.theme, slides: results };
       },
       "design_failed",

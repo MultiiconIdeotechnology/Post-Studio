@@ -43,3 +43,21 @@ Give 3 options (unless asked otherwise). For each option:
 8. **Risk**: one line (facts to confirm, consent, compliance).
 
 End with a one-line recommendation of which option to post first and why.
+
+## Group brands in Post Studio (added 16 Nov 2026)
+
+Post Studio now has one section per company. The source of truth for every brand's facts, voice,
+pillars and colours is `src/ai/brand.ts`; keep this file in step with it.
+
+| | Multiicon | Market Maya | Bonton Holidays |
+|---|---|---|---|
+| Instagram | @multiicon.official | @marketmayaofficial | @bonton_holidays |
+| What it posts | people, employee photos, events, days and occasions, the group at a glance, tech insight | strategy school, backtest before you trade, inside the platform, discipline and risk, market calendar | destination ideas to sell, agent toolkit, grow your agency, travel calendar, team and partners |
+| Audience | Indian professionals | Indian retail traders who want to be systematic | travel agents and travel businesses (B2B) |
+| Voice | sharp, warm, "we" | calm trading-desk mentor, precise, no hype | friendly, well-travelled trade partner |
+| Colours | navy #121a33, cream #f4f0e8, saffron #f2a33a | graphite #0b111c, signal blue #3d8bfd, market green #22c55e (our pick; site shows none) | sea blue #0f2a3d, sand #fbf3ea, Bonton orange #e65725 (from bontonholidays.com) |
+| Hard rule | consent for people in photos | every caption ends with the risk line (enforced at approval); no returns, tips or P&L | no fares, prices or offers unless typed by the team; visa news cited and verified |
+
+Market Maya facts come from marketmaya.com and its App Store listing (16 Nov 2026). Backtest length is
+written as `[CONFIRM]` because the site says both 3 years and 3 months. Bonton facts come from
+bontonholidays.com ("Trusted by 26,000+ travel agents") and its App Store listing (B2B app launched December 2018).

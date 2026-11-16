@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Post Studio · Multiicon</title>
+<title>Post Studio</title>
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#070b18">
+<!-- Brand registry from the server: sets window.PS_BRAND and data-brand before first paint. -->
+<script src="/brands.js"></script>
+<script>document.title = "Post Studio · " + window.PS_BRAND.name;</script>
 <script>try { if (localStorage.getItem("ps-theme") === "light") document.documentElement.dataset.theme = "light"; } catch {}</script>
 <script src="/shim.js"></script>
 <!-- Fonts and JSZip are served from this container (web/vendor), so the studio needs no third-party CDN. -->
@@ -19,16 +22,13 @@
 
 <aside class="rail" aria-label="Post Studio">
   <div class="brand">
-    <span class="wm" aria-label="Multiicon">MULTI<i>I</i>CON</span>
+    <span class="wm" id="railWm"></span>
     <span class="prod">Post Studio</span>
   </div>
-  <div class="acct">
-    <span class="acct-av" aria-hidden="true">M</span>
-    <span class="acct-tx"><b>@multiicon.official</b><small>Instagram</small></span>
-  </div>
+  <div class="brandsw" id="brandSwitch" aria-label="Company"></div>
   <nav class="steps" aria-label="Steps">
     <a href="#plan" data-step="s1"><span class="n">1</span><span class="t">Plan the week<small data-nav="s1">Not agreed yet</small></span></a>
-    <a href="#photos" data-step="s2"><span class="n">2</span><span class="t">Event photos<small data-nav="s2">No photos yet</small></span></a>
+    <a href="#photos" data-step="s2"><span class="n">2</span><span class="t"><span data-copy="photoNav">Event photos</span><small data-nav="s2">No photos yet</small></span></a>
     <a href="#polish" data-step="s3"><span class="n">3</span><span class="t">Polish photos<small data-nav="s3">Nothing picked</small></span></a>
     <a href="#write" data-step="s4"><span class="n">4</span><span class="t">Brief and write<small data-nav="s4">Not written yet</small></span></a>
     <a href="#review" data-step="s5"><span class="n">5</span><span class="t">Review and post<small data-nav="s5">Nothing to review</small></span></a>
@@ -72,20 +72,20 @@
 
 <section class="step" id="s2" aria-labelledby="h2t">
   <header class="stephead">
-    <div><p class="eyebrow">Step 2 of 5</p><h1 id="h2t">Event photos</h1>
-      <p class="sub">Tell Claude what happened at last week's event and drop in the raw photos. Claude rates them and picks the strongest.</p></div>
+    <div><p class="eyebrow">Step 2 of 5</p><h1 id="h2t" data-copy="photoStep">Event photos</h1>
+      <p class="sub" data-copy="photoSub">Tell Claude what happened at last week's event and drop in the raw photos. Claude rates them and picks the strongest.</p></div>
   </header>
   <div class="card">
-    <label class="field w-wide"><span>How many of this week's posts come from the event?</span><select id="eventCount"></select></label>
+    <label class="field w-wide"><span>How many of this week's posts come from the <span data-copy="eventWord">event</span>?</span><select id="eventCount"></select></label>
   </div>
   <div id="eventBlock" class="split">
     <div class="card stack">
-      <h2 class="card-h">Event facts</h2>
+      <h2 class="card-h" data-tpl="Facts about the {eventWord}">Event facts</h2>
       <p class="hint">Claude only uses what you type here. Anything missing comes back as <b>[CONFIRM: …]</b> and blocks approval until you fill it in.</p>
-      <label class="field"><span>Event name</span><input type="text" id="evName" placeholder="e.g. Multiicon Partner Evening 2026"></label>
-      <label class="field"><span>Date and place</span><input type="text" id="evWhen" placeholder="e.g. 24 Oct, Rajkot office"></label>
-      <label class="field"><span>What happened</span><textarea id="evWhat" placeholder="Who spoke, what was launched or celebrated, one moment people liked"></textarea></label>
-      <label class="field"><span>Who was there</span><textarea id="evWho" placeholder="e.g. 40 guests: partners, customers and the team"></textarea></label>
+      <label class="field"><span>Name</span><input type="text" id="evName" data-ph="eventNamePh"></label>
+      <label class="field"><span>Date and place</span><input type="text" id="evWhen" data-ph="eventWhenPh"></label>
+      <label class="field"><span>What happened</span><textarea id="evWhat" data-ph="eventWhatPh"></textarea></label>
+      <label class="field"><span>Who was there</span><textarea id="evWho" data-ph="eventWhoPh"></textarea></label>
       <label class="check consent"><input type="checkbox" id="evConsent"><span>Everyone clearly visible in these photos is okay with appearing on Instagram.</span></label>
     </div>
     <div class="card stack">
@@ -119,10 +119,15 @@
   </header>
   <div class="card stack">
     <div class="grid2">
-      <label class="field"><span>Trends or news you've noticed</span><textarea id="trends" rows="6" placeholder="Paste headlines, reels or topics doing well in IT, AI, fintech or travel this week"></textarea></label>
-      <label class="field"><span>Things we want to push</span><textarea id="focus" rows="6" placeholder="e.g. Market Maya paper trading, hiring for Flutter developers, a client milestone"></textarea></label>
+      <label class="field"><span>Trends or news you've noticed</span><textarea id="trends" rows="6" data-ph="trendsPh"></textarea></label>
+      <label class="field"><span>Things we want to push</span><textarea id="focus" rows="6" data-ph="focusPh"></textarea></label>
     </div>
     <p class="hint">Claude doesn't browse live trends from here, so paste what you've seen.</p>
+  </div>
+  <div class="card stack pillars-card">
+    <h2 class="card-h" data-tpl="Content pillars for {name}">Content pillars</h2>
+    <p class="hint">Claude spreads the week across these themes, in this brand's voice and colours.</p>
+    <ul class="pillars" id="pillars"></ul>
   </div>
   <div class="cta-bar">
     <button class="go lg" id="genBtn">Write the week's posts</button><button id="stopBtn" class="ghost" hidden>Stop</button>
@@ -159,20 +164,12 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-/* ---------- brand + voice (from the multiicon-post-studio skill) ---------- */
-const BRAND = `ACCOUNT: @multiicon.official, Instagram of Multiicon Ideotechnology (P) Ltd., a product-based IT company in Rajkot, Gujarat, India. Website multiicon.in.
-FACTS YOU MAY USE (never invent other numbers, awards, quotes, clients or results):
-- Works across six industries: finance and broking, travel and hospitality, security and surveillance, HR, news and media, social welfare.
-- 50K+ customers, 14 national awards, 20+ copyrights and trademarks.
-- 7 startups (including News On Screen, Jumbo Job, India Legend), 5 enterprise projects (Travel ERP, Forex ERP, Market Maya, Multi API, Right Hand) and 30+ utility apps.
-- Ideotechnology projects: JumboAI Algo, Candlestick Scanner, Backtest Strategy, mPiler.
-- Market Maya (marketmaya.com): AI algo trading platform. "Build. Back Test. Analyse. Follow. Autotrade." Paper and live auto trade, community, free to start.
-UNCONFIRMED, write [CONFIRM: ...] instead of stating: company age, award names, Market Maya backtest length.
-RULES: Any Market Maya or trading post ends the caption with "Trading involves risk. Past performance does not guarantee future results." and its risk field says compliance must approve. Never claim returns or profits. If people appear in photos, the risk field mentions consent.`;
-const VOICE = `VOICE: write like a sharp person on the Multiicon team, not like an AI. Plain, specific, confident, warm. Indian English spelling. Speak as "we".
-Avoid: em dashes, "in today's fast-paced world", "unlock", "elevate", "dive in", "game-changer", "revolutionary", "seamless", "journey", "embark", stacked rhetorical questions, triple-adjective lists, hashtags inside sentences. At most 2 emoji in a caption.
-Do: open with a concrete hook under 125 characters that a scroller would stop for; short paragraphs; vary sentence length; one clear call to action (save, share, tag, comment, link in bio). Audience: Indian professionals first, readable for an international audience.`;
-const TEMPLATES = `SLIDE TEMPLATES (1080x1350 portrait, brand navy/cream/saffron):
+/* ---------- brand + voice: from the server's brand registry (src/ai/brand.ts via /brands.js) ---------- */
+const B = window.PS_BRAND;
+const BRAND = B.facts;
+const VOICE = B.voice;
+const PILLARS = "CONTENT PILLARS (spread the week across these):\n" + B.pillars.map(x => `- ${x.name}: ${x.idea}`).join("\n");
+const TEMPLATES = `SLIDE TEMPLATES (1080x1350 portrait, in the brand's own colours):
 - "photo": full-bleed photo, kicker + headline over a dark fade at the bottom. Needs "photo".
 - "photo-card": dark slide, photo on top, kicker + headline + short body below. Needs "photo".
 - "photo-light": light slide, photo on top, headline + body below. Needs "photo".
@@ -180,13 +177,14 @@ const TEMPLATES = `SLIDE TEMPLATES (1080x1350 portrait, brand navy/cream/saffron
 - "number": light slide, kicker holds a short number like "01", then headline + body. For list carousels.
 - "cta": light closing slide, headline + body; the handle is added automatically.
 Limits: kicker <= 5 words (uppercase label), headline <= 9 words, body <= 28 words. Carousel 2 to 8 slides; single image = 1 slide.`;
-const OPTION_SHAPE = `{"label":"2-4 word name of the angle","format":"carousel or single","hook":"first line","caption":"full caption starting with the hook, no hashtags, under 1200 characters","hashtags":["#Multiicon","..."],"alt":"one plain sentence describing slide 1","why":"one line on why it could perform","risk":"one line: facts to confirm, consent, compliance","slides":[{"template":"photo-card","photo":1,"kicker":"","headline":"","body":""}]}`;
+const OPTION_SHAPE = `{"label":"2-4 word name of the angle","format":"carousel or single","hook":"first line","caption":"full caption starting with the hook, no hashtags, under 1200 characters","hashtags":["${B.copy.hashtag}","..."],"alt":"one plain sentence describing slide 1","why":"one line on why it could perform","risk":"one line: facts to confirm, consent, compliance","slides":[{"template":"photo-card","photo":1,"kicker":"","headline":"","body":""}]}`;
 const TPL = ["photo", "photo-card", "photo-light", "text-dark", "text-light", "number", "cta"];
 const PHOTO_TPL = new Set(["photo", "photo-card", "photo-light"]);
 const TPL_NAME = { "photo": "Full photo", "photo-card": "Photo card, dark", "photo-light": "Photo card, light", "text-dark": "Text, dark", "text-light": "Text, light", "number": "Numbered point", "cta": "Closing slide" };
 
 /* ---------- state ---------- */
-const KEY = "multiicon-planner-v1";
+// Each brand keeps its own weeks. Multiicon keeps its original key so existing work stays.
+const KEY = B.id === "multiicon" ? "multiicon-planner-v1" : `ps-planner-${B.id}-v1`;
 const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
@@ -260,8 +258,9 @@ $("#suggestBtn").onclick = async () => {
   try {
     const o = await sample.json(`${BRAND}
 
-You plan the Instagram calendar. Suggest how many feed posts @multiicon.official should publish in the week ${fmtDay(S.weekStart)} to ${fmtDay(addDays(S.weekStart, 6))} (${S.weekStart} is a Monday).
-Consider: a B2B product company with a small team, quality over volume, 3 to 5 posts a week is typical, festivals or observances in India or internationally that fall in this week (only ones you are confident about), and that one post may be an event recap.
+You plan the Instagram calendar. Suggest how many feed posts ${B.handle} should publish in the week ${fmtDay(S.weekStart)} to ${fmtDay(addDays(S.weekStart, 6))} (${S.weekStart} is a Monday).
+Consider: ${B.copy.audience}; ${B.copy.cadence}; festivals or observances in India or internationally that fall in this week (only ones you are confident about) and that matter to this audience.
+${PILLARS}
 Team notes: ${S.trends || "none"} ${S.focus || ""}
 Reply with only JSON: {"count":4,"reason":"one or two sentences","mix":[{"day":"Mon","idea":"short idea"}],"dates":["Observance, date (verify)"]}`, { modelTier: "quick" });
     const n = clamp(parseInt(o.count) || 4, 1, 14);
@@ -327,9 +326,9 @@ $("#pickBtn").onclick = async () => {
       const batch = photos.slice(i, i + per);
       setStatus(st, `Looking at photos ${i + 1}–${i + batch.length} of ${photos.length}…`);
       const blobs = await Promise.all(batch.map(p => scaledBlob(p.img)));
-      const res = await sample.json(`You are the photo editor for @multiicon.official, the Instagram account of Multiicon, a product IT company in Rajkot, India.
-These ${batch.length} photos are raw shots from a company event. Event: ${ev.name || "not given"}. ${ev.what || ""}
-Rate each photo for an Instagram feed post meant to earn reach, saves, shares and likes from Indian and international professional audiences. Judge: faces in sharp focus, genuine expressions and moments, flattering light, clean composition and background, how well it tells the story of the event, whether it is a near-duplicate of another photo in this set, and whether simple edits (exposure, colour, crop) can fix its problems.
+      const res = await sample.json(`You are the photo editor for ${B.handle}, the Instagram account of ${B.name} (${B.role}).
+These ${batch.length} photos are raw shots from a ${B.copy.eventWord}. Name: ${ev.name || "not given"}. ${ev.what || ""}
+Rate each photo for an Instagram feed post meant to earn reach, saves, shares and likes from this audience: ${B.copy.audience}. Judge: faces in sharp focus, genuine expressions and moments, flattering light, clean composition and background, how well it tells the story of the event, whether it is a near-duplicate of another photo in this set, and whether simple edits (exposure, colour, crop) can fix its problems.
 The photos are numbered 1 to ${batch.length} in the order attached.
 Reply with only a JSON array, one object per photo: [{"n":1,"score":7.5,"desc":"what it shows, under 14 words","reason":"why this score, under 16 words","issues":"fixable issues or none","focal":{"x":0.5,"y":0.4}}]
 score is 0 to 10 with one decimal. focal is the point (0 to 1 from top-left) a 4:5 crop must keep, usually the main face or group.`, { images: blobs });
@@ -431,8 +430,8 @@ function renderEdits() {
       const k = W / sw;
       x.fillStyle = "rgba(10,14,28,.45)";
       x.fillRect(0, 0, W, cy * k); x.fillRect(0, (cy + ch) * k, W, H); x.fillRect(0, cy * k, cx * k, ch * k); x.fillRect((cx + cw) * k, cy * k, W, ch * k);
-      x.strokeStyle = "#f2a33a"; x.lineWidth = 3; x.strokeRect(cx * k, cy * k, cw * k, ch * k);
-      x.beginPath(); x.arc(p.focal.x * W, p.focal.y * H, 9, 0, 7); x.fillStyle = "#f2a33a"; x.fill();
+      x.strokeStyle = C.orange; x.lineWidth = 3; x.strokeRect(cx * k, cy * k, cw * k, ch * k);
+      x.beginPath(); x.arc(p.focal.x * W, p.focal.y * H, 9, 0, 7); x.fillStyle = C.orange; x.fill();
     };
     draw();
     cv.onclick = e => { const b = cv.getBoundingClientRect(); p.focal = { x: clamp((e.clientX - b.left) / b.width, 0, 1), y: clamp((e.clientY - b.top) / b.height, 0, 1) }; draw(); redrawAll(); };
@@ -449,8 +448,9 @@ function renderEdits() {
   });
 }
 
-/* ---------- slide renderer (matches the existing @multiicon.official look) ---------- */
-const C = { navy: "#121a33", cream: "#f4f0e8", orange: "#f2a33a", white: "#ffffff", subDark: "#c8ccd8", subLight: "#3b4256", ph: "#2a3352" };
+/* ---------- slide renderer: the plain layout in the brand's colours (Claude's designs replace it) ---------- */
+// navy = the brand's dark home colour, cream = its light one, orange = its accent.
+const C = { navy: B.slide.dark, cream: B.slide.light, orange: B.slide.accent, white: "#ffffff", subDark: B.slide.subDark, subLight: B.slide.subLight, ph: B.slide.placeholder };
 const FONT = '"Inter", "Helvetica Neue", Arial, sans-serif';
 const fontsReady = Promise.all(["800 80px Inter", "700 30px Inter", "500 30px Inter", "400 30px Inter"].map(f => document.fonts.load(f))).catch(() => {});
 function wrap(x, text, maxW) {
@@ -505,7 +505,7 @@ function drawSlide(x, s, i, n) {
   if (t === "number" && s.kicker) blocks.push({ k: "num", lines: [String(s.kicker)], size: 200, lh: .95, gap: 24 });
   if (s.headline) { const f = fit(x, s.headline, 800, photoT ? 70 : 84, 44, MW, photoT ? 4 : 5); blocks.push({ k: "head", ...f, lh: 1.06, gap: 26 }); }
   if (s.body) { const f = fit(x, s.body, 400, 33, 26, MW, photoT ? 4 : 7); blocks.push({ k: "body", ...f, lh: 1.42, gap: 0 }); }
-  if (t === "cta") blocks.push({ k: "handle", lines: ["Follow @multiicon.official"], size: 32, lh: 1, gap: 0 });
+  if (t === "cta") blocks.push({ k: "handle", lines: ["Follow " + B.handle], size: 32, lh: 1, gap: 0 });
   const bh = b => b.lines.length * b.size * b.lh;
   const total = blocks.reduce((a, b, j) => a + bh(b) + (j < blocks.length - 1 ? b.gap : 0), 0);
   let y = anchor === "top" ? top : anchor === "bottom" ? bottom - total : Math.max(P, (H - 120 - total) / 2);
@@ -524,10 +524,10 @@ function drawSlide(x, s, i, n) {
   // footer wordmark
   const fy = H - 82;
   x.font = `800 24px ${FONT}`; spaced(x, 4.5);
-  const parts = [["MULTI", fg], ["I", C.orange], ["CON", fg]]; let fx = P;
+  const parts = B.wordmark.map(([tx, c]) => [tx, c === "accent" ? C.orange : fg]); let fx = P;
   parts.forEach(([tx, col]) => { x.fillStyle = col; x.fillText(tx, fx, fy); fx += x.measureText(tx).width; });
   spaced(x, 2); x.font = `700 22px ${FONT}`; x.fillStyle = fg; x.textAlign = "right";
-  x.fillText(n > 1 ? `${i + 1} / ${n}` : "@multiicon.official", W - P, fy + 2); x.textAlign = "left"; spaced(x, 0);
+  x.fillText(n > 1 ? `${i + 1} / ${n}` : B.handle, W - P, fy + 2); x.textAlign = "left"; spaced(x, 0);
 }
 /* Claude-designed slides: a finished 1080x1350 image (art and words together) from the server. */
 const designImgs = new Map();
@@ -544,11 +544,9 @@ function slideCanvas(s, i, n) { const c = document.createElement("canvas"); c.wi
 /* ---------- posts ---------- */
 const opt = p => p.options[p.sel] || null;
 const confirmCount = o => !o ? 0 : (JSON.stringify([o.caption, o.slides, o.alt]).match(/\[CONFIRM/gi) || []).length;
-const EXAMPLE = { id: "example", kind: "example", day: "", time: "", topic: "Example from last week (Diwali). Your generated posts replace this.", sel: 0, slide: 0, approved: false, state: "ready",
-  options: [{ label: "Diwali wish", format: "single", hook: "Six industries, 50K+ customers, one wish this Diwali.",
-    caption: "Six industries, 50K+ customers, one wish this Diwali.\n\nFrom brokers and travel agents to newsrooms and social organisations, the people we build for keep India moving. This festival, we wish each of you light, prosperity and a fresh start.\n\nHappy Diwali and a happy New Year from all of us at Multiicon ✨",
-    hashtags: ["#HappyDiwali", "#Multiicon", "#Rajkot", "#Gujarat"], alt: "Text slide wishing Happy Diwali from Multiicon.", why: "Festive posts with a real brand fact get shared more than generic greetings.", risk: "None.",
-    slides: [{ template: "text-dark", kicker: "Happy Diwali · Saal Mubarak", headline: "Six industries. 50K+ customers. One wish.", body: "Light, prosperity and a fresh start, from all of us." }] }] };
+const EX = B.example;
+const EXAMPLE = { id: "example", kind: "example", day: "", time: "", topic: EX.topic, sel: 0, slide: 0, approved: false, state: "ready",
+  options: [{ label: EX.label, format: "single", hook: EX.hook, caption: EX.caption, hashtags: EX.hashtags, alt: EX.alt, why: EX.why, risk: EX.risk, slides: [{ ...EX.slide }] }] };
 
 function renderPosts() {
   const g = $("#posts");
@@ -666,11 +664,12 @@ function redrawAll() { clearTimeout(redrawT); redrawT = setTimeout(() => documen
 function updateApproveGate(el) {
   const p = S.posts.find(x => x.id === el.dataset.id); if (!p || p.state !== "ready") return;
   const o = opt(p), n = confirmCount(o), needConsent = p.kind === "event" && !S.ev.consent;
+  const needLine = !!B.requiredCaptionLine && !(o.caption || "").includes(B.requiredCaptionLine);
   const box = $(".appr", el), txt = $(".apprtext", el), chip = $(".pstate", el), pb = $("[data-act=post]", el);
-  const blocked = n > 0 || needConsent;
+  const blocked = n > 0 || needConsent || needLine;
   if (blocked && p.approved) { p.approved = false; save(); }
   box.disabled = blocked; box.checked = !!p.approved; el.classList.toggle("approved", !!p.approved);
-  txt.textContent = n > 0 ? `Fill ${n} [CONFIRM] gap${n > 1 ? "s" : ""} in the caption or slides first.` : needConsent ? "Tick the photo consent box in step 2 first." : "I've checked the facts, the photos and the caption. Approve this option.";
+  txt.textContent = n > 0 ? `Fill ${n} [CONFIRM] gap${n > 1 ? "s" : ""} in the caption or slides first.` : needLine ? `The caption must end with: "${B.requiredCaptionLine}"` : needConsent ? "Tick the photo consent box in step 2 first." : "I've checked the facts, the photos and the caption. Approve this option.";
   chip.className = "chip pstate " + (p.exported ? "ok" : p.approved ? "ok" : blocked ? "bad" : "warn");
   chip.textContent = p.exported ? "Downloaded" : p.approved ? "Approved" : blocked ? "Needs facts" : "Draft";
   pb.disabled = !p.approved;
@@ -691,7 +690,10 @@ function normOption(o, p) {
     return { template: photoId || !PHOTO_TPL.has(tpl) ? tpl : "text-dark", photoId: PHOTO_TPL.has(tpl) ? photoId : null, kicker: String(s.kicker || ""), headline: String(s.headline || ""), body: String(s.body || "") };
   });
   if (!slides.length) slides.push({ template: "text-dark", kicker: "", headline: String(o.hook || "Headline"), body: "" });
-  return { label: String(o.label || "Option"), format: String(o.format || (slides.length > 1 ? "carousel" : "single")), hook: String(o.hook || ""), caption: String(o.caption || ""),
+  // A brand's required closing line (Market Maya's risk line) is added here, in code, not left to the prompt.
+  let caption = String(o.caption || "");
+  if (B.requiredCaptionLine && !caption.includes(B.requiredCaptionLine)) caption = caption.trim() + "\n\n" + B.requiredCaptionLine;
+  return { label: String(o.label || "Option"), format: String(o.format || (slides.length > 1 ? "carousel" : "single")), hook: String(o.hook || ""), caption,
     hashtags: (Array.isArray(o.hashtags) ? o.hashtags : String(o.hashtags || "").split(/\s+/)).map(String).filter(Boolean).slice(0, 12).map(h => h.startsWith("#") ? h : "#" + h),
     alt: String(o.alt || ""), why: String(o.why || ""), risk: String(o.risk || ""), slides };
 }
@@ -702,7 +704,7 @@ function postPrompt(p) {
   const others = S.posts.filter(x => x !== p && x.options && x.options.length).map(x => "- " + (x.topic || "") + ": " + (opt(x)?.hook || "")).join("\n") || "none yet";
   const when = `${fmtDay(p.day)} at ${p.time} IST`;
   if (p.kind === "event") return `${BRAND}\n\n${VOICE}\n\n${TEMPLATES}\n
-TASK: Write 3 clearly different options for one Instagram post about Multiicon's event last week. It goes out ${when}.
+TASK: Write 3 clearly different options for one Instagram post for ${B.handle} about ${B.name}'s ${B.copy.eventWord} last week. It goes out ${when}.
 EVENT FACTS (use only these; if a post needs a fact that is missing, write [CONFIRM: what is needed]):
 - Name: ${S.ev.name || "[not given]"}
 - Date and place: ${S.ev.when || "[not given]"}
@@ -710,7 +712,7 @@ EVENT FACTS (use only these; if a post needs a fact that is missing, write [CONF
 - Who was there: ${S.ev.who || "[not given]"}
 PHOTOS for this post, best first (refer to them by number in "photo"):
 ${photoList(p)}
-Make the three options different angles, for example: a warm thank-you recap carousel, one standout moment told as a short story, and a people-first or behind-the-scenes angle. Slide 1 must stop the scroll. Use photo templates for photo slides; you may end with a "cta" slide.
+Make the three options different angles, for example: ${B.copy.eventAngles}. Slide 1 must stop the scroll. Use photo templates for photo slides; you may end with a "cta" slide.
 Other posts planned this week (don't repeat them):\n${others}
 Reply with only JSON: {"options":[${OPTION_SHAPE}, ...]} with exactly 3 options.`;
   return `${BRAND}\n\n${VOICE}\n\n${TEMPLATES}\n
@@ -769,8 +771,10 @@ $("#genBtn").onclick = async () => {
     try {
       const r = await sample.json(`${BRAND}
 
-Plan ${K} Instagram posts (not counting ${E} event-recap post${E === 1 ? "" : "s"} already set for ${posts.map(p => fmtDay(p.day)).join(", ") || "no days"}) for @multiicon.official in the week ${S.weekStart} (Monday) to ${addDays(S.weekStart, 6)}.
-Use: festivals or observances in India or internationally that fall in this week (only ones you are confident about, and set "verify" to what should be double-checked), the team's trend notes, things the team wants to push, product spotlights (Market Maya, startups, enterprise products), people and culture. Balance educating, showing work, and celebrating. Spread posts over different days than the event posts where possible. Pick times that suit an Indian professional audience (for example 09:00, 13:00, 19:00).
+Plan ${K} Instagram posts (not counting ${E} event-recap post${E === 1 ? "" : "s"} already set for ${posts.map(p => fmtDay(p.day)).join(", ") || "no days"}) for ${B.handle} (${B.name}: ${B.role}) in the week ${S.weekStart} (Monday) to ${addDays(S.weekStart, 6)}.
+Audience: ${B.copy.audience}. ${B.copy.cadence}.
+${PILLARS}
+Use: the pillars above (use different pillars across the week), festivals or observances in India or internationally that fall in this week and matter to this audience (only ones you are confident about, and set "verify" to what should be double-checked), the team's trend notes and things the team wants to push. Spread posts over different days than the ${B.copy.eventWord} posts where possible. Pick times that suit this audience (for example 09:00, 13:00, 19:00).
 Team trend notes: ${S.trends || "none"}
 Things to push: ${S.focus || "none"}
 Reply with only JSON: {"slots":[{"day":"YYYY-MM-DD","time":"HH:MM","topic":"short topic","angle":"one line","verify":"what to fact-check or empty"}]} with exactly ${K} slots.`, { modelTier: "default", cache: false });
@@ -842,7 +846,7 @@ function openPostPanel(el, p) {
   $("[data-x=zip]", pn).onclick = async () => {
     const zip = new JSZip(); setStatus(st, "Preparing images…");
     await addPostToZip(zip, p, "");
-    if (await saveZip(zip, `multiicon-${p.day}-${slug(p.topic)}.zip`, st)) { p.exported = true; save(); updateApproveGate(el); renderSched(); }
+    if (await saveZip(zip, `${B.id}-${p.day}-${slug(p.topic)}.zip`, st)) { p.exported = true; save(); updateApproveGate(el); renderSched(); }
   };
   $("[data-x=copy]", pn).onclick = () => {
     const text = fullCaption(opt(p));
@@ -856,7 +860,7 @@ $("#exportAll").onclick = async () => {
   const zip = new JSZip();
   for (const p of ok) await addPostToZip(zip, p, `${p.day}_${p.time.replace(":", "")}_${slug(p.topic)}`);
   zip.file("schedule.txt", ok.map(p => `${fmtDay(p.day)} ${p.time}  ${p.topic}  (${opt(p).slides.length} slide${opt(p).slides.length > 1 ? "s" : ""})`).join("\n") + "\n");
-  if (await saveZip(zip, `multiicon-week-${S.weekStart}.zip`, st)) { ok.forEach(p => p.exported = true); save(); document.querySelectorAll(".post").forEach(updateApproveGate); renderSched(); }
+  if (await saveZip(zip, `${B.id}-week-${S.weekStart}.zip`, st)) { ok.forEach(p => p.exported = true); save(); document.querySelectorAll(".post").forEach(updateApproveGate); renderSched(); }
 };
 function renderSched() {
   const t = $("#sched");
@@ -867,7 +871,7 @@ function renderSched() {
 }
 
 /* ---------- hooks for studio.js (server features) ---------- */
-window.PS = { get S() { return S; }, photos, photoById, processed, designsReady, requestDesign, fmtDay, addDays, renderPhotos, renderEdits, redrawAll, opt, cur, slideCanvas, save, fill, fillSlide, replaceCard, updateApproveGate, renderSched, fullCaption, slug, setStatus, errCopy, fontsReady, esc, uid, EDIT0, PHOTO_TPL, get sample() { return sample; } };
+window.PS = { B, get S() { return S; }, photos, photoById, processed, designsReady, requestDesign, fmtDay, addDays, renderPhotos, renderEdits, redrawAll, opt, cur, slideCanvas, save, fill, fillSlide, replaceCard, updateApproveGate, renderSched, fullCaption, slug, setStatus, errCopy, fontsReady, esc, uid, EDIT0, PHOTO_TPL, get sample() { return sample; } };
 document.dispatchEvent(new CustomEvent("ps:ready"));
 
 /* ---------- buttons + boot ---------- */

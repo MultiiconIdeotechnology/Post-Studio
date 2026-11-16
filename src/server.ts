@@ -18,6 +18,7 @@ import { claudeConfigured } from "./ai/claude.js";
 import { listProviders } from "./images/index.js";
 import { instagramStatus } from "./publish/instagram.js";
 import { startScheduler, stopScheduler } from "./publish/scheduler.js";
+import { BRANDS, DEFAULT_BRAND } from "./ai/brand.js";
 
 export async function buildServer() {
   const app = Fastify({ logger: { level: config.NODE_ENV === "production" ? "info" : "debug" }, bodyLimit: 60 * 1024 * 1024 });
@@ -45,6 +46,12 @@ export async function buildServer() {
     publicBaseUrl: config.PUBLIC_BASE_URL,
     timezone: config.TIMEZONE,
   }));
+
+  // Brand registry for the page, loaded as a plain script before anything else so the right
+  // brand, colours and labels are in place on first paint. Public marketing facts only.
+  const brandsJs = `window.PS_BRANDS=${JSON.stringify(BRANDS)};window.PS_DEFAULT_BRAND=${JSON.stringify(DEFAULT_BRAND)};(function(){var q=new URLSearchParams(location.search).get("brand"),s=null;try{s=localStorage.getItem("ps-brand")}catch(e){}var id=window.PS_BRANDS[q]?q:window.PS_BRANDS[s]?s:window.PS_DEFAULT_BRAND;try{localStorage.setItem("ps-brand",id)}catch(e){}window.PS_BRAND=window.PS_BRANDS[id];document.documentElement.dataset.brand=id;})();`;
+  app.get("/brands.js", async (_req, reply) => reply.type("application/javascript; charset=utf-8").header("cache-control", "no-cache").send(brandsJs));
+  app.get("/api/brands", async () => ({ brands: Object.values(BRANDS).map((b) => ({ id: b.id, name: b.name, handle: b.handle, website: b.website, role: b.role })) }));
 
   registerAuth(app);
   registerAiRoutes(app);

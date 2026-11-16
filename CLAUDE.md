@@ -11,7 +11,7 @@ where it is cheap to do so.
 - `docs/ARCHITECTURE.md` and `docs/DECISIONS.md` — target architecture and ADRs (amendments at the bottom)
 - `docs/PLATFORM_CAPABILITIES.md` — verified Instagram / Meta / LinkedIn API limits; re-verify before touching a connector
 - `docs/IMPLEMENTATION.md` — what exists in this repo today and how the pieces fit
-- `docs/BRAND_SKILL.md` — brand facts and voice (mirrored in `src/ai/brand.ts`; change both together)
+- `docs/BRAND_SKILL.md` — brand facts and voice for each company (mirrored in `src/ai/brand.ts`; change both together)
 
 ## Non-negotiable rules
 
@@ -31,7 +31,8 @@ src/server.ts            Fastify app, static web, /api/status, startup (migrate 
 src/config.ts            all settings from env (zod); a missing optional key switches a feature off
 src/db/                  pg pool, SQL migrations (src/db/migrations/*.sql, applied in order on start)
 src/ai/claude.ts         Claude service: text, JSON, images in; usage logged to llm_call
-src/ai/brand.ts          brand facts, voice, visual direction (the server-side system prompt)
+src/ai/brand.ts          brand registry: Multiicon, Market Maya, Bonton Holidays (facts, voice, pillars,
+                         slide colours, wordmark); served to the page as /brands.js; systemFor(brand)
 src/images/provider.ts   ImageProvider interface; fal.ts (FLUX, Ideogram, Kling), gemini.ts, openai.ts
 src/images/compose.ts    deterministic text + wordmark overlay (sharp + SVG)
 src/design/post-design.ts Claude designs whole slides (art + the slide's own words) as SVG: plan a look
@@ -49,6 +50,8 @@ tests/                   vitest: unit tests and an HTTP test against a real Post
 ```
 
 Post states: `draft → approved → scheduled → publishing → published`, plus `failed` (retried by pg-boss) and `cancelled`. Any content edit returns a post to `draft` and clears the approval.
+
+Brands: each company is a section (`?brand=multiicon|marketmaya|bonton`). `plan.account` holds the brand's Instagram handle, so each brand has its own weeks; Multiicon keeps `multiicon.official` and its old browser key. Every Claude call, design call and plan save sends `brand`. App colours per brand live in `web/app.css` (`:root[data-brand=...]`), slide colours in `src/ai/brand.ts`.
 
 ## Working here
 

@@ -2,8 +2,10 @@
 // backed by this server instead. Keys never reach the browser.
 (() => {
   "use strict";
+  // Every Claude call carries the selected brand, so the server adds that brand's facts and voice.
+  const brand = () => (window.PS_BRAND ? window.PS_BRAND.id : undefined);
   const api = async (path, body) => {
-    const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...body, brand: brand() }) });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       const err = { code: json.error || "api_error", message: json.message || res.statusText, text: json.text };

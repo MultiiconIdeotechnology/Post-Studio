@@ -16,6 +16,43 @@
 
   let current = null;
 
+  /* ---------- brand sections ---------- */
+  // Each company has its own section: its own weeks and posts (kept per brand), voice, pillars
+  // and colours. Switching reloads the page with ?brand=, so nothing from one brand leaks into another.
+  const B = window.PS_BRAND;
+  const BRANDS = window.PS_BRANDS || {};
+  const escH = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const wordmark = (b) => b.wordmark.map(([t, c]) => (c === "accent" ? `<i>${escH(t)}</i>` : escH(t))).join("");
+  function paintBrand() {
+    if (!B) return;
+    const wm = $("#railWm");
+    if (wm) { wm.innerHTML = wordmark(B); wm.setAttribute("aria-label", B.name); }
+    const sw = $("#brandSwitch");
+    if (sw) {
+      sw.innerHTML = `<span class="brandsw-h">Company</span>` + Object.values(BRANDS).map((b) =>
+        `<a class="bs" href="?brand=${b.id}" data-brand="${b.id}" style="--bs-c:${b.slide.accent}"${b.id === B.id ? ' aria-current="page"' : ""} title="${escH(b.name + ": " + b.role)}">` +
+        `<span class="bs-av" aria-hidden="true">${escH(b.monogram)}</span><span class="bs-tx"><b>${escH(b.name)}</b><small>${escH(b.handle)}</small></span></a>`).join("");
+      sw.querySelectorAll("a.bs").forEach((a) => {
+        a.onclick = (e) => {
+          e.preventDefault();
+          if (a.dataset.brand === B.id) return;
+          const n = window.PS && window.PS.photos ? window.PS.photos.length : 0;
+          if (n && !confirm(`Switch to ${BRANDS[a.dataset.brand].name}? The ${n} photo${n > 1 ? "s" : ""} loaded in this tab will be cleared. Written posts stay saved with ${B.name}.`)) return;
+          try { localStorage.setItem("ps-brand", a.dataset.brand); } catch {}
+          location.href = `?brand=${a.dataset.brand}${location.hash}`;
+        };
+      });
+    }
+    document.querySelectorAll("[data-copy]").forEach((el) => { const v = B.copy[el.dataset.copy]; if (v) el.textContent = v; });
+    document.querySelectorAll("[data-tpl]").forEach((el) => { el.textContent = el.dataset.tpl.replace(/\{(\w+)\}/g, (_, k) => B.copy[k] || B[k] || ""); });
+    document.querySelectorAll("[data-ph]").forEach((el) => { const v = B.copy[el.dataset.ph]; if (v) el.placeholder = v; });
+    const pl = $("#pillars");
+    if (pl) pl.innerHTML = B.pillars.map((x) => `<li><b>${escH(x.name)}</b>${escH(x.idea)}</li>`).join("");
+    NEXT_LABEL.s1 = B.copy.photoNav;
+    PREV_LABEL.s3 = B.copy.photoNav;
+  }
+  paintBrand();
+
   function facts() {
     const PS = window.PS;
     const S = PS.S;
@@ -120,7 +157,7 @@
     themeBtn.textContent = light ? "Dark mode" : "Light mode";
     themeBtn.setAttribute("aria-pressed", String(light));
     const m = $('meta[name="theme-color"]');
-    if (m) m.content = light ? "#e9ecf4" : "#070b18";
+    if (m) m.content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || (light ? "#e9ecf4" : "#070b18");
   }
   if (themeBtn) {
     themeBtn.onclick = () => {

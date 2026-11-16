@@ -7,11 +7,13 @@ import { audit } from "../audit.js";
 import { instagramStatus } from "../publish/instagram.js";
 import { cancelScheduled, schedulePost, type PostRow } from "../publish/scheduler.js";
 import { getAsset, mediaHref } from "../storage.js";
+import { BRAND_IDS, brandByAccount, getBrand } from "../ai/brand.js";
 
 // Plans hold the planner's state per week; posts hold what gets approved and published.
 // Approval binds a hash of caption + images (ADR-008) so a later edit voids it.
 
-const PlanBody = z.object({ weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), state: z.record(z.string(), z.unknown()).default({}) });
+const BrandId = z.enum(BRAND_IDS as [string, ...string[]]);
+const PlanBody = z.object({ brand: BrandId.default("multiicon"), weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), state: z.record(z.string(), z.unknown()).default({}) });
 
 const PostBody = z.object({
   kind: z.enum(["event", "idea"]),
@@ -48,23 +50,27 @@ async function withUrls(p: PostRow) {
 export function registerPlanRoutes(app: FastifyInstance) {
   app.get("/api/plans", async (req, reply) => {
     if (!requireAuth(req, reply)) return;
-    return { plans: await query("select id, week_start, account, updated_at from plan order by week_start desc limit 52") };
+    // Each brand has its own weeks; plan.account holds the brand's Instagram handle.
+    const brand = (req.query as { brand?: string }).brand;
+    if (brand) return { plans: await query("select id, week_start, account, updated_at from plan where account = $1 order by week_start desc limit 52", [getBrand(BrandId.parse(brand)).account]) };
+    return { plans: await query("select id, week_start, account, updated_at from plan order by week_start desc limit 104") };
   });
 
   app.put("/api/plans", async (req, reply) => {
     if (!requireAuth(req, reply)) return;
     const body = PlanBody.parse(req.body);
     const plan = await one(
-      `insert into plan (week_start, state) values ($1, $2)
+      `insert into plan (account, week_start, state) values ($1, $2, $3)
        on conflict (account, week_start) do update set state = excluded.state, updated_at = now() returning *`,
-      [body.weekStart, body.state],
+      [getBrand(body.brand).account, body.weekStart, body.state],
     );
     return { plan };
   });
 
   app.get<{ Params: { weekStart: string } }>("/api/plans/:weekStart", async (req, reply) => {
     if (!requireAuth(req, reply)) return;
-    const plan = await one<{ id: string }>("select * from plan where account = 'multiicon.official' and week_start = $1", [req.params.weekStart]);
+    const brand = BrandId.default("multiicon").parse((req.query as { brand?: string }).brand);
+    const plan = await one<{ id: string }>("select * from plan where account = $1 and week_start = $2", [getBrand(brand).account, req.params.weekStart]);
     if (!plan) return reply.code(404).send({ error: "not_found" });
     const posts = await query<PostRow>("select * from post where plan_id = $1 order by scheduled_for nulls last, created_at", [plan.id]);
     return { plan, posts: await Promise.all(posts.map(withUrls)) };
@@ -112,6 +118,11 @@ export function registerPlanRoutes(app: FastifyInstance) {
     }
     if (!cur.caption?.trim()) return reply.code(422).send({ error: "incomplete", message: "The post needs a caption" });
     if (/\[CONFIRM/i.test(cur.caption)) return reply.code(422).send({ error: "incomplete", message: "Fill every [CONFIRM] gap before approving" });
+    const plan = await one<{ account: string }>("select account from plan where id = $1", [cur.plan_id]);
+    const brand = brandByAccount(plan?.account);
+    if (brand.requiredCaptionLine && !cur.caption.includes(brand.requiredCaptionLine)) {
+      return reply.code(422).send({ error: "incomplete", message: `${brand.name} captions must include: "${brand.requiredCaptionLine}"` });
+    }
     if (!cur.render_asset_ids.length) return reply.code(422).send({ error: "incomplete", message: "The post needs at least one rendered image" });
     const hash = approvalHash(cur.caption, cur.render_asset_ids);
     const post = await one<PostRow>("update post set state = 'approved', approved_at = now(), approved_hash = $2, updated_at = now() where id = $1 returning *", [cur.id, hash]);

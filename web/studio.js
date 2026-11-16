@@ -3,6 +3,7 @@
 (() => {
   "use strict";
   const $ = (s, r = document) => r.querySelector(s);
+  const BRAND = window.PS_BRAND;
   const api = async (method, path, body, isForm) => {
     const res = await fetch(path, { method, headers: isForm ? undefined : { "content-type": "application/json" }, body: isForm ? body : body ? JSON.stringify(body) : undefined });
     const json = await res.json().catch(() => ({}));
@@ -18,7 +19,7 @@
     await new Promise((resolve) => {
       const box = document.createElement("div");
       box.className = "login";
-      box.innerHTML = `<form><span class="wm" aria-label="Multiicon">MULTI<i>I</i>CON</span><div><h1>Post Studio</h1><p class="hint">Sign in with the team password to plan and approve this week's posts.</p></div><label class="field"><span>Team password</span><input type="password" id="pw" autocomplete="current-password" required autofocus></label><button class="go lg" type="submit">Sign in</button><span class="status err" id="pwErr" role="alert"></span></form>`;
+      box.innerHTML = `<form><span class="wm" aria-label="${BRAND.name}">${BRAND.wordmark.map(([t, c]) => (c === "accent" ? `<i>${t}</i>` : t)).join("")}</span><div><h1>Post Studio</h1><p class="hint">Sign in with the team password to plan and approve this week's posts.</p></div><label class="field"><span>Team password</span><input type="password" id="pw" autocomplete="current-password" required autofocus></label><button class="go lg" type="submit">Sign in</button><span class="status err" id="pwErr" role="alert"></span></form>`;
       document.body.appendChild(box);
       $("#pw", box).focus();
       $("form", box).onsubmit = async (e) => {
@@ -55,7 +56,7 @@
   async function savePlan() {
     const S = window.PS.S;
     try {
-      const { plan } = await api("PUT", "/api/plans", { weekStart: S.weekStart, state: { postCount: S.postCount, agreed: S.agreed, eventCount: S.eventCount, ev: S.ev, trends: S.trends, focus: S.focus, suggestion: S.suggestion, posts: S.posts } });
+      const { plan } = await api("PUT", "/api/plans", { brand: BRAND.id, weekStart: S.weekStart, state: { postCount: S.postCount, agreed: S.agreed, eventCount: S.eventCount, ev: S.ev, trends: S.trends, focus: S.focus, suggestion: S.suggestion, posts: S.posts } });
       planId = plan.id;
     } catch (e) {
       console.warn("plan save failed", e.message);
@@ -132,7 +133,7 @@
       for (const s of o.slides) {
         slides.push({ kicker: s.kicker || "", headline: s.headline || "", body: s.body || "", template: s.template, photoAssetId: s.photoId && PS.PHOTO_TPL.has(s.template) ? (await uploadPhoto(s.photoId)) || undefined : undefined });
       }
-      const r = await api("POST", "/api/design/post", { planId, mode: o.theme ? mode : "fresh", theme: o.theme || undefined, topic: p.topic || "", hook: o.hook || "", caption: o.caption || "", slides });
+      const r = await api("POST", "/api/design/post", { brand: BRAND.id, planId, mode: o.theme ? mode : "fresh", theme: o.theme || undefined, topic: p.topic || "", hook: o.hook || "", caption: o.caption || "", slides });
       clearInterval(timer);
       if (textSig(o) !== sig) { const s = st(); if (s) PS.setStatus(s, "The slides changed while they were being designed. Press New Generate themes to design them again."); return; }
       o.theme = r.theme;
@@ -207,7 +208,7 @@
           zip.file("caption.txt", `${p.day} ${p.time} IST\n\n${PS.fullCaption(o)}\n\nAlt text: ${o.alt}\n`);
           const data = await zip.generateAsync({ type: "blob" });
           const d = await window.claude.use("downloads");
-          await d.save({ filename: `multiicon-${p.day}-${PS.slug(p.topic)}.zip`, data });
+          await d.save({ filename: `${BRAND.id}-${p.day}-${PS.slug(p.topic)}.zip`, data });
           p.exported = true;
           PS.save();
           PS.updateApproveGate(el);
