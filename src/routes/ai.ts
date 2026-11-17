@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { ClaudeError, claudeConfigured, sampleJson, sampleText } from "../ai/claude.js";
-import { SYSTEM } from "../ai/brand.js";
+import { BRAND_IDS, systemFor } from "../ai/brand.js";
 import { requireAuth } from "../auth.js";
 
 // The browser never holds an API key. It sends prompts here; the brand system prompt is
@@ -11,6 +11,7 @@ const Body = z.object({
   prompt: z.string().min(1).max(200_000),
   tier: z.enum(["quick", "default", "complex"]).optional(),
   task: z.string().max(60).optional(),
+  brand: z.enum(BRAND_IDS as [string, ...string[]]).optional(),
   // Base64 JPEG/PNG images for photo scoring. The browser downsizes them first.
   images: z.array(z.object({ mime: z.enum(["image/jpeg", "image/png", "image/webp"]), data: z.string() })).max(10).optional(),
 });
@@ -27,7 +28,7 @@ export function registerAiRoutes(app: FastifyInstance) {
     if (!claudeConfigured()) return reply.code(503).send({ error: "not_configured", message: "ANTHROPIC_API_KEY is not set on the server" });
     const body = Body.parse(req.body);
     try {
-      const text = await sampleText({ prompt: body.prompt, system: SYSTEM, tier: body.tier, task: body.task ?? "text", images: body.images?.map((i) => ({ mime: i.mime, data: Buffer.from(i.data, "base64") })) });
+      const text = await sampleText({ prompt: body.prompt, system: systemFor(body.brand), tier: body.tier, task: body.task ?? "text", images: body.images?.map((i) => ({ mime: i.mime, data: Buffer.from(i.data, "base64") })) });
       return { text };
     } catch (e) {
       const r = errorReply(e);
@@ -40,7 +41,7 @@ export function registerAiRoutes(app: FastifyInstance) {
     if (!claudeConfigured()) return reply.code(503).send({ error: "not_configured", message: "ANTHROPIC_API_KEY is not set on the server" });
     const body = Body.parse(req.body);
     try {
-      const value = await sampleJson({ prompt: body.prompt, system: SYSTEM, tier: body.tier, task: body.task ?? "json", images: body.images?.map((i) => ({ mime: i.mime, data: Buffer.from(i.data, "base64") })) });
+      const value = await sampleJson({ prompt: body.prompt, system: systemFor(body.brand), tier: body.tier, task: body.task ?? "json", images: body.images?.map((i) => ({ mime: i.mime, data: Buffer.from(i.data, "base64") })) });
       return { value };
     } catch (e) {
       const r = errorReply(e);

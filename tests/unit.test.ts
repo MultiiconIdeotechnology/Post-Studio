@@ -110,7 +110,13 @@ describe("anthropic workspace error", async () => {
 });
 
 describe("post design checks", async () => {
-  const { checkWords, checkTextBounds, svgWords } = await import("../src/design/post-design.js");
+  const { checkWords, checkTextBounds, svgWords, footerSvg } = await import("../src/design/post-design.js");
+  it("draws each brand's own wordmark in the footer", () => {
+    expect(footerSvg("light", "1 / 3", "bonton")).toContain("BONTON");
+    expect(footerSvg("light", "1 / 3", "bonton")).toContain("#e65725");
+    expect(footerSvg("dark", "@multiicon.official")).toContain("MULTI");
+    for (const id of ["multiicon", "marketmaya", "bonton"]) expect(footerSvg("light", "1 / 2", id)).toMatch(/<image href="data:image\/(png|svg\+xml);base64,/);
+  });
   const svg = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350">${body}</svg>`;
   const slide = { kicker: "AI security", headline: "Your AI tools need a check too", body: "Three things to review." };
   it("accepts the slide's own words, in any case", () => {
@@ -125,6 +131,12 @@ describe("post design checks", async () => {
   it("rejects dropped words", () => {
     const s = svg(`<text x="80" y="200">Your AI tools</text>`);
     expect(checkWords(s, slide, 0, 3)).toMatch(/missing/);
+  });
+  it("allows the brand's own handle and wordmark, not another brand's", () => {
+    const cta = { headline: "Test before you trade", template: "cta" };
+    const s = svg(`<text x="80" y="200">Test before you trade</text><text x="80" y="400">Follow @marketmayaofficial</text>`);
+    expect(checkWords(s, cta, 2, 3, "marketmaya")).toBeNull();
+    expect(checkWords(s, cta, 2, 3, "multiicon")).toMatch(/marketmayaofficial/);
   });
   it("finds text that runs off the canvas or into the wordmark band", async () => {
     expect(await checkTextBounds(svg(`<text x="80" y="300" font-family="Inter" font-size="60">Fits fine</text>`))).toBeNull();

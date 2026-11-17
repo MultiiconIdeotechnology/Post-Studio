@@ -81,7 +81,7 @@ describe("plan → post → approve → schedule", () => {
     const r = await app.inject({ method: "POST", url: `/api/images/upload?planId=${planId}&kind=render`, headers: { cookie, "content-type": `multipart/form-data; boundary=${boundary}` }, payload: body });
     expect(r.statusCode).toBe(200);
     assetId = j(r).assets[0].id;
-    const media = await app.inject({ method: "GET", url: new URL(j(r).assets[0].url).pathname });
+    const media = await app.inject({ method: "GET", url: new URL(j(r).assets[0].url, "http://localhost").pathname });
     expect(media.statusCode).toBe(200);
   });
 
@@ -96,6 +96,32 @@ describe("plan → post → approve → schedule", () => {
     const ok = await app.inject({ method: "POST", url: `/api/posts/${postId}/approve`, headers: { cookie }, payload: { approve: true } });
     expect(j(ok).post.state).toBe("approved");
     expect(j(ok).post.approved_hash).toBeTruthy();
+  });
+
+  it("keeps each brand's weeks apart and enforces Market Maya's risk line", async () => {
+    const mm = await app.inject({ method: "PUT", url: "/api/plans", headers: { cookie }, payload: { brand: "marketmaya", weekStart: week, state: { postCount: 2 } } });
+    expect(mm.statusCode).toBe(200);
+    expect(j(mm).plan.account).toBe("marketmayaofficial");
+    expect(j(mm).plan.id).not.toBe(planId);
+    const g = await app.inject({ method: "GET", url: `/api/plans/${week}`, headers: { cookie } });
+    expect(j(g).plan.state.postCount).toBe(3); // Multiicon's week is untouched
+    const list = await app.inject({ method: "GET", url: "/api/plans?brand=marketmaya", headers: { cookie } });
+    expect(j(list).plans.every((p: { account: string }) => p.account === "marketmayaofficial")).toBe(true);
+    const c = await app.inject({ method: "POST", url: `/api/plans/${j(mm).plan.id}/posts`, headers: { cookie }, payload: { kind: "idea", topic: "Backtesting", renderAssetIds: [assetId], caption: "Test it on history first." } });
+    const pid = j(c).post.id;
+    const blocked = await app.inject({ method: "POST", url: `/api/posts/${pid}/approve`, headers: { cookie }, payload: { approve: true } });
+    expect(blocked.statusCode).toBe(422);
+    expect(j(blocked).message).toMatch(/Trading involves risk/);
+    await app.inject({ method: "PUT", url: `/api/posts/${pid}`, headers: { cookie }, payload: { caption: "Test it on history first.\n\nTrading involves risk. Past performance does not guarantee future results." } });
+    const ok = await app.inject({ method: "POST", url: `/api/posts/${pid}/approve`, headers: { cookie }, payload: { approve: true } });
+    expect(j(ok).post.state).toBe("approved");
+  });
+
+  it("serves the brand registry to the page", async () => {
+    const r = await app.inject({ method: "GET", url: "/brands.js" });
+    expect(r.statusCode).toBe(200);
+    expect(r.body).toContain("window.PS_BRANDS");
+    expect(r.body).toContain("bonton_holidays");
   });
 
   it("refuses to schedule while Instagram is not connected", async () => {

@@ -53,7 +53,8 @@ Who develops it: you and Claude, in this Claude project (repo attached, PRs from
 | Trend research (web search) | Not built. Users paste trends. Next: Claude web search tool server-side + Instagram Business Discovery for public accounts |
 | Reference accounts / taste model | Not built. Next: a `reference_post` table + a prompt that studies them |
 | Insights loop (post results → next plan) | Not built (`docs/ROADMAP.md` Phase 4) |
-| LinkedIn, Bonton Holidays, Market Maya accounts | Not built |
+| Bonton Holidays and Market Maya Instagram sections | Built 16 Nov 2026: own weeks, voice, pillars, app theme and slide design per brand. Publishing still needs each account connected |
+| LinkedIn | Not built |
 | MCP server exposing the studio to Claude | Not built (ADR-009 scopes still apply when it is) |
 | CI/CD deploy to the server | CI builds and tests; deploy job added once the server is reachable |
 
@@ -82,3 +83,14 @@ When a post is written, the planner sends its selected option to `POST /api/desi
 - adds the MULTIICON wordmark and page number itself, then saves a 1080x1350 JPEG.
 
 The planner shows that image as the slide. Editing a slide's words or photo drops its design (so what is approved is what is seen). "New Generate themes" redesigns the post as a variation of the current look or a completely new one. Fonts for designs: Inter, Inter Display and IBM Plex (Serif, Sans Condensed, Mono), installed in the Docker image. Rough cost on Claude Opus 5.5: about $0.15 to $0.25 per slide, so $3 to $5 for a four-post week.
+
+## Brand sections (16 Nov 2026)
+
+The rail has a company switcher: Multiicon, Market Maya, Bonton Holidays. Picking one reloads the page with `?brand=`; the choice is remembered.
+
+- `src/ai/brand.ts` is the registry. The server serves it to the page as `/brands.js` (loaded first, so the right colours paint immediately) and adds the brand's facts and voice to every Claude call (`brand` on `/api/ai/*`).
+- Plans: `PUT /api/plans` takes `brand`; it is stored as `plan.account` (the Instagram handle), already part of the unique key, so no migration was needed and Multiicon's weeks are untouched. `GET /api/plans?brand=` and `GET /api/plans/:week?brand=` filter by it.
+- Writing: planning, photo picking and the three options use the brand's audience, cadence and content pillars. Market Maya's risk line is added to every caption in code, and `POST /api/posts/:id/approve` refuses a Market Maya caption without it.
+- Design: `/api/design/post` takes `brand`; the designer gets the brand's palette, type pairing and style, the CTA line uses its handle, the word check allows its handle and wordmark, and the server draws its wordmark in the footer.
+- App theme: `web/app.css` tokens are channel variables (`--acc-rgb` etc.) repainted per `:root[data-brand]`, dark and light.
+- Logos are text wordmarks for now; real logo files were not reachable from the build environment.
