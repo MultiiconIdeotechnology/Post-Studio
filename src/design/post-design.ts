@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { extractJson, sampleText } from "../ai/claude.js";
 import { getBrand, type Brand } from "../ai/brand.js";
@@ -194,6 +197,23 @@ function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
 
+// Logo files live in web/brands (also served to the browser). src/design and dist/design both
+// sit two levels under the repo root.
+const BRANDS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "web", "brands");
+const logoCache = new Map<string, string | null>();
+export function logoDataUri(b: Brand): string | null {
+  if (!logoCache.has(b.id)) {
+    try {
+      const buf = readFileSync(join(BRANDS_DIR, b.logo));
+      const mime = b.logo.endsWith(".svg") ? "image/svg+xml" : "image/png";
+      logoCache.set(b.id, `data:${mime};base64,${buf.toString("base64")}`);
+    } catch {
+      logoCache.set(b.id, null);
+    }
+  }
+  return logoCache.get(b.id)!;
+}
+
 export function wordmarkText(b: Brand): string {
   return b.wordmark.map(([t]) => t).join("");
 }
@@ -203,8 +223,12 @@ export function footerSvg(mark: "light" | "dark", label: string, brand?: string)
   const fg = mark === "light" ? "#ffffff" : b.slide.dark;
   const y = H - 62;
   const wm = b.wordmark.map(([t, c]) => `<tspan fill="${c === "accent" ? b.slide.accent : fg}">${esc(t)}</tspan>`).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-<text x="${MARGIN + 28}" y="${y}" font-family="Inter, sans-serif" font-size="24" font-weight="800" letter-spacing="4.5" fill="${fg}" xml:space="preserve">${wm}</text>
+  const logo = logoDataUri(b);
+  const logoSize = 44;
+  const logoEl = logo ? `<image href="${logo}" x="${MARGIN + 28}" y="${y - 33}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"/>` : "";
+  const textX = MARGIN + 28 + (logo ? logoSize + 14 : 0);
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+${logoEl}<text x="${textX}" y="${y}" font-family="Inter, sans-serif" font-size="24" font-weight="800" letter-spacing="4.5" fill="${fg}" xml:space="preserve">${wm}</text>
 <text x="${W - MARGIN - 28}" y="${y}" text-anchor="end" font-family="Inter, sans-serif" font-size="22" font-weight="700" letter-spacing="2" fill="${fg}">${esc(label)}</text>
 </svg>`;
 }

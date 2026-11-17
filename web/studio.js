@@ -19,7 +19,7 @@
     await new Promise((resolve) => {
       const box = document.createElement("div");
       box.className = "login";
-      box.innerHTML = `<form><span class="wm" aria-label="${BRAND.name}">${BRAND.wordmark.map(([t, c]) => (c === "accent" ? `<i>${t}</i>` : t)).join("")}</span><div><h1>Post Studio</h1><p class="hint">Sign in with the team password to plan and approve this week's posts.</p></div><label class="field"><span>Team password</span><input type="password" id="pw" autocomplete="current-password" required autofocus></label><button class="go lg" type="submit">Sign in</button><span class="status err" id="pwErr" role="alert"></span></form>`;
+      box.innerHTML = `<form><span class="brand-row"><img class="brand-logo" src="/brands/${BRAND.logo}" alt=""><span class="wm" aria-label="${BRAND.name}">${BRAND.wordmark.map(([t, c]) => (c === "accent" ? `<i>${t}</i>` : t)).join("")}</span></span><div><h1>Post Studio</h1><p class="hint">Sign in with the team password to plan and approve this week's posts.</p></div><label class="field"><span>Team password</span><input type="password" id="pw" autocomplete="current-password" required autofocus></label><button class="go lg" type="submit">Sign in</button><span class="status err" id="pwErr" role="alert"></span></form>`;
       document.body.appendChild(box);
       $("#pw", box).focus();
       $("form", box).onsubmit = async (e) => {

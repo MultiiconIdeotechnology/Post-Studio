@@ -27,11 +27,13 @@
     if (!B) return;
     const wm = $("#railWm");
     if (wm) { wm.innerHTML = wordmark(B); wm.setAttribute("aria-label", B.name); }
+    const lg = $("#railLogo");
+    if (lg) lg.src = `/brands/${B.logo}`;
     const sw = $("#brandSwitch");
     if (sw) {
       sw.innerHTML = `<span class="brandsw-h">Company</span>` + Object.values(BRANDS).map((b) =>
         `<a class="bs" href="?brand=${b.id}" data-brand="${b.id}" style="--bs-c:${b.slide.accent}"${b.id === B.id ? ' aria-current="page"' : ""} title="${escH(b.name + ": " + b.role)}">` +
-        `<span class="bs-av" aria-hidden="true">${escH(b.monogram)}</span><span class="bs-tx"><b>${escH(b.name)}</b><small>${escH(b.handle)}</small></span></a>`).join("");
+        `<span class="bs-av has-logo" aria-hidden="true"><img src="/brands/${escH(b.logo)}" alt=""></span><span class="bs-tx"><b>${escH(b.name)}</b><small>${escH(b.handle)}</small></span></a>`).join("");
       sw.querySelectorAll("a.bs").forEach((a) => {
         a.onclick = (e) => {
           e.preventDefault();

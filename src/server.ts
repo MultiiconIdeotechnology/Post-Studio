@@ -49,7 +49,7 @@ export async function buildServer() {
 
   // Brand registry for the page, loaded as a plain script before anything else so the right
   // brand, colours and labels are in place on first paint. Public marketing facts only.
-  const brandsJs = `window.PS_BRANDS=${JSON.stringify(BRANDS)};window.PS_DEFAULT_BRAND=${JSON.stringify(DEFAULT_BRAND)};(function(){var q=new URLSearchParams(location.search).get("brand"),s=null;try{s=localStorage.getItem("ps-brand")}catch(e){}var id=window.PS_BRANDS[q]?q:window.PS_BRANDS[s]?s:window.PS_DEFAULT_BRAND;try{localStorage.setItem("ps-brand",id)}catch(e){}window.PS_BRAND=window.PS_BRANDS[id];document.documentElement.dataset.brand=id;})();`;
+  const brandsJs = `window.PS_BRANDS=${JSON.stringify(BRANDS)};window.PS_DEFAULT_BRAND=${JSON.stringify(DEFAULT_BRAND)};(function(){var q=new URLSearchParams(location.search).get("brand"),s=null;try{s=localStorage.getItem("ps-brand")}catch(e){}var id=window.PS_BRANDS[q]?q:window.PS_BRANDS[s]?s:window.PS_DEFAULT_BRAND;try{localStorage.setItem("ps-brand",id)}catch(e){}window.PS_BRAND=window.PS_BRANDS[id];document.documentElement.dataset.brand=id;var l=document.createElement("link");l.rel="icon";l.href="/brands/"+window.PS_BRAND.logo;document.head.appendChild(l);})();`;
   app.get("/brands.js", async (_req, reply) => reply.type("application/javascript; charset=utf-8").header("cache-control", "no-cache").send(brandsJs));
   app.get("/api/brands", async () => ({ brands: Object.values(BRANDS).map((b) => ({ id: b.id, name: b.name, handle: b.handle, website: b.website, role: b.role })) }));
 

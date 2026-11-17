@@ -91,22 +91,22 @@
 }
 
 /* ---------- brand sections: each company repaints the whole app ----------
-   Multiicon uses the tokens above. Bonton orange #e65725 is the theme colour on bontonholidays.com.
-   Market Maya's blue and graphite are our pick (its site exposes no colours); change them here
-   and in src/ai/brand.ts together. */
+   Multiicon uses the tokens above. Bonton orange #e65725 is the theme colour on bontonholidays.com
+   and sits in its logo ring. Market Maya red #e31e24 comes from its logo; graphite is our pick.
+   Change colours here and in src/ai/brand.ts together. */
 :root[data-brand="marketmaya"] {
   --bg: #05080e; --surface: #0c1320; --surface-2: #111b2c; --muted: #a3b0c6; --faint: #6b7891;
   --rail: rgba(3, 6, 12, 0.82);
-  --acc-rgb: 61, 139, 253; --acc2-rgb: 108, 92, 255; --cool-rgb: 34, 197, 94; --line-rgb: 150, 175, 215; --deep-rgb: 4, 7, 13;
-  --deep: #05080e; --deep-2: #0c1320; --rail-solid: #080d17; --acc-on-rail: #8cbcff;
-  --saffron: #3d8bfd; --saffron-2: #6c5cff; --saffron-ink: #8cbcff; --saffron-soft: rgba(61, 139, 253, 0.15); --on-saffron: #ffffff;
-  --grad: linear-gradient(135deg, #5aa9ff 0%, #3d8bfd 45%, #6c5cff 100%);
-  --focus: #5aa9ff; --glow-a: rgba(61, 139, 253, 0.18); --glow-b: rgba(34, 197, 94, 0.12);
+  --acc-rgb: 227, 30, 36; --acc2-rgb: 255, 90, 95; --cool-rgb: 61, 139, 253; --line-rgb: 150, 175, 215; --deep-rgb: 4, 7, 13;
+  --deep: #05080e; --deep-2: #0c1320; --rail-solid: #080d17; --acc-on-rail: #ff8a8e;
+  --saffron: #ff3b40; --saffron-2: #e31e24; --saffron-ink: #ff8a8e; --saffron-soft: rgba(227, 30, 36, 0.16); --on-saffron: #ffffff;
+  --grad: linear-gradient(135deg, #ff6166 0%, #e31e24 50%, #b5121a 100%);
+  --focus: #ff6166; --glow-a: rgba(227, 30, 36, 0.16); --glow-b: rgba(61, 139, 253, 0.16);
 }
 :root[data-brand="marketmaya"][data-theme="light"] {
-  --bg: #e9eef6; --surface: #ffffff; --surface-2: #f4f7fb; --muted: #475569; --faint: #7b8798;
-  --rail: #0a1222; --saffron-ink: #1d5fd1; --saffron-soft: #e2edff; --focus: #2f74e6;
-  --glow-a: rgba(61, 139, 253, 0.16); --glow-b: rgba(34, 197, 94, 0.1);
+  --bg: #eef0f4; --surface: #ffffff; --surface-2: #f6f7f9; --muted: #475569; --faint: #7b8798;
+  --rail: #0a1222; --saffron-ink: #b5121a; --saffron-soft: #fde4e5; --focus: #e31e24;
+  --glow-a: rgba(227, 30, 36, 0.12); --glow-b: rgba(61, 139, 253, 0.1);
 }
 :root[data-brand="bonton"] {
   --bg: #041219; --surface: #0a1f2b; --surface-2: #0f2a39; --muted: #a6bcc8; --faint: #6c8593;
@@ -626,3 +626,10 @@ details.se input, details.se select, details.se textarea { background: var(--sur
 }
 .post.example .approve input:disabled + span { color: var(--muted); }
 :root[data-brand="bonton"] .brand .wm, :root[data-brand="bonton"] .login .wm { font-size: 14.5px; letter-spacing: 0.16em; }
+
+/* company logos (web/brands) */
+.brand-row { display: flex; align-items: center; gap: 10px; }
+.brand-logo { width: 30px; height: 30px; object-fit: contain; flex: none; }
+.bs-av.has-logo { background: rgba(255, 255, 255, 0.06); padding: 5px; }
+.bs-av.has-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.login .brand-row { gap: 12px; }

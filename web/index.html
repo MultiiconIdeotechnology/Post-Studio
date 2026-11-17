@@ -22,7 +22,7 @@
 
 <aside class="rail" aria-label="Post Studio">
   <div class="brand">
-    <span class="wm" id="railWm"></span>
+    <span class="brand-row"><img class="brand-logo" id="railLogo" alt=""><span class="wm" id="railWm"></span></span>
     <span class="prod">Post Studio</span>
   </div>
   <div class="brandsw" id="brandSwitch" aria-label="Company"></div>
@@ -452,7 +452,10 @@ function renderEdits() {
 // navy = the brand's dark home colour, cream = its light one, orange = its accent.
 const C = { navy: B.slide.dark, cream: B.slide.light, orange: B.slide.accent, white: "#ffffff", subDark: B.slide.subDark, subLight: B.slide.subLight, ph: B.slide.placeholder };
 const FONT = '"Inter", "Helvetica Neue", Arial, sans-serif';
-const fontsReady = Promise.all(["800 80px Inter", "700 30px Inter", "500 30px Inter", "400 30px Inter"].map(f => document.fonts.load(f))).catch(() => {});
+// The brand's logo sits in the slide footer, before the wordmark (same as the server's designs).
+const LOGO = new Image(); LOGO.src = "/brands/" + B.logo;
+const logoReady = LOGO.decode ? LOGO.decode().catch(() => {}) : Promise.resolve();
+const fontsReady = Promise.all([logoReady, ...["800 80px Inter", "700 30px Inter", "500 30px Inter", "400 30px Inter"].map(f => document.fonts.load(f))]).catch(() => {});
 function wrap(x, text, maxW) {
   const out = [];
   String(text || "").split("\n").forEach(par => {
@@ -525,6 +528,7 @@ function drawSlide(x, s, i, n) {
   const fy = H - 82;
   x.font = `800 24px ${FONT}`; spaced(x, 4.5);
   const parts = B.wordmark.map(([tx, c]) => [tx, c === "accent" ? C.orange : fg]); let fx = P;
+  if (LOGO.complete && LOGO.naturalWidth) { x.drawImage(LOGO, P, fy - 9, 42, 42); fx = P + 56; }
   parts.forEach(([tx, col]) => { x.fillStyle = col; x.fillText(tx, fx, fy); fx += x.measureText(tx).width; });
   spaced(x, 2); x.font = `700 22px ${FONT}`; x.fillStyle = fg; x.textAlign = "right";
   x.fillText(n > 1 ? `${i + 1} / ${n}` : B.handle, W - P, fy + 2); x.textAlign = "left"; spaced(x, 0);

@@ -30,6 +30,7 @@ export interface Brand {
   // Wordmark as parts: [text, "ink" | "accent"]. Drawn by the app, the slide footer and the canvas renderer.
   wordmark: [string, "ink" | "accent"][];
   monogram: string;
+  logo: string; // file in web/brands/, served at /brands/<file>; drawn in the app and the slide footer
   facts: string;
   voice: string;
   visualDirection: string;
@@ -71,6 +72,7 @@ const multiicon: Brand = {
   linkedin: "linkedin.com/company/mulitiicon",
   wordmark: [["MULTI", "ink"], ["I", "accent"], ["CON", "ink"]],
   monogram: "M",
+  logo: "multiicon.png",
   facts: `ACCOUNT: @multiicon.official, Instagram of Multiicon Ideotechnology (P) Ltd., a product-based IT company in Rajkot, Gujarat, India. Website multiicon.in. Group companies with their own accounts: Market Maya (@marketmayaofficial) and Bonton Holidays (@bonton_holidays).
 FACTS YOU MAY USE (never invent other numbers, awards, quotes, clients or results):
 - Works across six industries: finance and broking, travel and hospitality, security and surveillance, HR, news and media, social welfare.
@@ -96,12 +98,12 @@ Do: open with a concrete hook under 125 characters that a scroller would stop fo
     darker: "#0b1022",
     light: "#f4f0e8",
     accent: "#f2a33a",
-    support: ["#2bd4c0", "#3d7bff"],
+    support: ["#d80e5d", "#f1503c"], // from the logo's magenta to orange bars
     subDark: "#c8ccd8",
     subLight: "#3b4256",
     placeholder: "#2a3352",
     fonts: { display: "Inter Display 800", text: "Inter 400" },
-    style: "a confident international tech brand: editorial, modern, calm. Deep navy and warm cream are home colours; saffron is the light.",
+    style: "a confident international tech brand: editorial, modern, calm. Deep navy and warm cream are home colours; saffron is the light. The logo's magenta-to-orange bars (#b91461, #d80e5d, #f1503c, #f89838) may appear as a gradient or stripe motif.",
   },
   copy: {
     audience: "a B2B product company with a small team and Indian professionals as the audience; quality over volume",
@@ -143,6 +145,7 @@ const marketmaya: Brand = {
   linkedin: "linkedin.com/company/market-maya",
   wordmark: [["MARKET", "ink"], ["MAYA", "accent"]],
   monogram: "MM",
+  logo: "marketmaya.svg",
   facts: `ACCOUNT: @marketmayaofficial, Instagram of Market Maya (marketmaya.com), an AI algo trading platform built by Multiicon Ideotechnology (P) Ltd., Rajkot, India.
 FACTS YOU MAY USE (never invent other numbers, features, brokers, prices, users or results):
 - Tagline: "Trade Smarter, Not Harder". Product line: "Build. Back Test. Analyse. Follow. Autotrade."
@@ -158,7 +161,7 @@ RULES (non-negotiable): every caption ends with "${RISK_LINE}" and every risk fi
   voice: `VOICE: a calm, sharp trading-desk mentor who respects the reader's money. Plain, precise, a little dry. Indian English spelling. Speak as "we" for Market Maya and "you" for the trader.
 ${COMMON_VOICE_AVOID} Also avoid: "to the moon", "easy money", "passive income", "beat the market", rocket or money-bag emoji, hype about AI.
 Do: open with a concrete trading situation or a common mistake (under 125 characters); explain one idea per post; use numbers only as clearly hypothetical examples; end with one call to action (save, try paper trading, link in bio). Audience: Indian retail traders and investors who want to be systematic.`,
-  visualDirection: `VISUAL DIRECTION for generated images: a precise fintech look. Dark graphite and deep midnight backgrounds, clean chart lines, candlesticks, grids and data panels drawn as abstract graphics (no real tickers, prices or P&L), one strong focal point, space left for a headline. Palette: graphite #0b111c, midnight #101a2c, signal blue accent #3d8bfd, market green #22c55e and a little red #ef4444 only for chart meaning. Avoid: money piles, bulls and bears clichés, lambos, rockets, text or logos inside the image.`,
+  visualDirection: `VISUAL DIRECTION for generated images: a precise fintech look. Dark graphite and deep midnight backgrounds, clean chart lines, candlesticks, grids and data panels drawn as abstract graphics (no real tickers, prices or P&L), one strong focal point, space left for a headline. Palette: graphite #0b111c, midnight #101a2c, Market Maya red #e31e24 (from the logo) as the brand accent, with cool blue #3d8bfd and market green #22c55e for chart lines. Avoid: money piles, bulls and bears clichés, lambos, rockets, text or logos inside the image.`,
   pillars: [
     { name: "Strategy school", idea: "one trading concept explained plainly: indicators, entries and exits, position sizing" },
     { name: "Backtest before you trade", idea: "why and how to test a strategy on history and paper trade it first" },
@@ -170,13 +173,13 @@ Do: open with a concrete trading situation or a common mistake (under 125 charac
     dark: "#0b111c",
     darker: "#060a12",
     light: "#eef3fb",
-    accent: "#3d8bfd",
-    support: ["#22c55e", "#8b5cf6"],
+    accent: "#e31e24", // Market Maya red, from the logo
+    support: ["#3d8bfd", "#22c55e"],
     subDark: "#b7c2d6",
     subLight: "#334155",
     placeholder: "#1a2436",
     fonts: { display: "IBM Plex Sans Condensed 700", text: "Inter 400" },
-    style: "a precise fintech product: graphite and midnight, signal blue light, thin chart lines, grids and data panels, monospace numbers (IBM Plex Mono). Calm and exact, never flashy. Green and red only where they mean up and down.",
+    style: "a precise fintech product: graphite and midnight, Market Maya red as the brand mark (its square-spiral logo), thin chart lines in cool blue, grids and data panels, monospace numbers (IBM Plex Mono). Calm and exact, never flashy. Use the brand red for the brand, not to mean a loss; chart lines stay blue or green.",
   },
   requiredCaptionLine: RISK_LINE,
   copy: {
@@ -219,6 +222,7 @@ const bonton: Brand = {
   linkedin: "linkedin.com/company/bontonholidays",
   wordmark: [["BONTON", "ink"], [" HOLIDAYS", "accent"]],
   monogram: "B",
+  logo: "bonton.png",
   facts: `ACCOUNT: @bonton_holidays, Instagram of Bonton Holidays (P) Ltd. (bontonholidays.com), a B2B travel portal and travel tech company in the Multiicon group, Rajkot, India.
 FACTS YOU MAY USE (never invent other numbers, fares, offers, destinations or results):
 - B2B travel portal for travel agents, corporate clients and SMEs. "Trusted by 26,000+ travel agents."
@@ -231,7 +235,7 @@ RULES: the audience is travel agents, not holidaymakers: every post helps an age
   voice: `VOICE: a friendly, well-travelled partner who knows the trade. Warm, practical, upbeat without hype. Indian English spelling. Speak as "we" to "you" the travel agent.
 ${COMMON_VOICE_AVOID} Also avoid: "wanderlust", "paradise", "bucket list", "hidden gem", "breathtaking".
 Do: open with something an agent can use today (a destination idea, a selling tip, a season to plan for) under 125 characters; be concrete about the destination or the tool; one call to action (save, share with your team, sign up as an agent, link in bio). Audience: travel agents and travel businesses across India.`,
-  visualDirection: `VISUAL DIRECTION for generated images: bright, sunny, real-feeling travel photography or clean editorial illustration: destinations, flights and stays, people travelling. Warm light, one strong focal point, space left for a headline. Palette: Bonton orange #e65725, deep sea blue #0f2a3d, sand #fbf3ea, sky teal #13a5a0. Avoid: stock clichés (suitcase on a beach), fake landmarks, text or logos inside the image.`,
+  visualDirection: `VISUAL DIRECTION for generated images: bright, sunny, real-feeling travel photography or clean editorial illustration: destinations, flights and stays, people travelling. Warm light, one strong focal point, space left for a headline. Palette: the logo's ring colours (red #c4262e, Bonton orange #e65725, amber #f39c1e), deep sea blue #0f2a3d, sand #fbf3ea, sky teal #13a5a0. Avoid: stock clichés (suitcase on a beach), fake landmarks, text or logos inside the image.`,
   pillars: [
     { name: "Destination ideas to sell", idea: "a destination, season or trip type an agent can package and sell, with practical selling points" },
     { name: "Agent toolkit", idea: "one Bonton feature: flights, hotels, packages, visa, bus, forex, white label website and app" },
@@ -244,12 +248,12 @@ Do: open with something an agent can use today (a destination idea, a selling ti
     darker: "#0a1d2b",
     light: "#fbf3ea",
     accent: "#e65725",
-    support: ["#13a5a0", "#f6b93b"],
+    support: ["#f39c1e", "#c4262e", "#13a5a0"], // amber and red from the logo ring, teal for sea and sky
     subDark: "#c6d6e0",
     subLight: "#4a3f38",
     placeholder: "#1d3f55",
     fonts: { display: "Inter Display 800", text: "IBM Plex Serif 400" },
-    style: "a warm, sunny travel-trade brand: deep sea blue and sand are home colours, Bonton orange is the sun. Editorial travel layouts, route lines, boarding-pass and postcard motifs, map dots, soft horizon gradients.",
+    style: "a warm, sunny travel-trade brand: deep sea blue and sand are home colours, Bonton orange is the sun, with the logo ring's red and amber around it. Editorial travel layouts, route lines, boarding-pass and postcard motifs, map dots, soft horizon gradients.",
   },
   copy: {
     audience: "travel agents and travel businesses across India (B2B); every post helps them sell, serve or grow",

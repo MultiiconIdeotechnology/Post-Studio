@@ -115,6 +115,7 @@ describe("post design checks", async () => {
     expect(footerSvg("light", "1 / 3", "bonton")).toContain("BONTON");
     expect(footerSvg("light", "1 / 3", "bonton")).toContain("#e65725");
     expect(footerSvg("dark", "@multiicon.official")).toContain("MULTI");
+    for (const id of ["multiicon", "marketmaya", "bonton"]) expect(footerSvg("light", "1 / 2", id)).toMatch(/<image href="data:image\/(png|svg\+xml);base64,/);
   });
   const svg = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350">${body}</svg>`;
   const slide = { kicker: "AI security", headline: "Your AI tools need a check too", body: "Three things to review." };
